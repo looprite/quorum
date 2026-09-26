@@ -223,7 +223,7 @@ rather than guessing:
 ```
 This project runs a Quorom deployment for <YOUR COMPANY>.
 
-The code is upstream at github.com/saaswise-cc/quorom and is read-only to us.
+The code is upstream at github.com/looprite/quorom and is read-only to us.
 We never edit it, fork it or patch it. Read it there when you need to know how
 something behaves. Start with docs/setup.md, then README.md and
 docs/supported-configuration.md.
@@ -506,7 +506,7 @@ chosen it yet, and nothing here depends on it.
 
 ```bash
 cd ~
-git clone https://github.com/saaswise-cc/quorom.git quorom
+git clone https://github.com/looprite/quorom.git quorom
 cd ~/quorom
 python3.12 -m venv .venv && source .venv/bin/activate   # any 3.11+ will do
 python -m pip install --upgrade pip
