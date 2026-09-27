@@ -8,25 +8,25 @@ with no read path named is a step that should not exist.
 This is the pipeline as it actually runs, written down rather than redesigned —
 a description of working code, not of an intention.
 
-The code lives in `quorom/` — one module per step, named for the step:
+The code lives in `quorum/` — one module per step, named for the step:
 
 ```
-quorom/bootstrap.py         quorom init — the account row and the focus profile
-quorom/config.py            every environment value, in one place
-quorom/geography.py         regions, countries and the HQ comparison
-quorom/db.py                the product DB and the queries against it
-quorom/domains.py           internal / external / personal classification
-quorom/gong/                client.py · importer.py · identity.py      (step 0)
-quorom/crm/                 salesforce.py · hubspot.py                 (steps 3-5)
+quorum/bootstrap.py         quorum init — the account row and the focus profile
+quorum/config.py            every environment value, in one place
+quorum/geography.py         regions, countries and the HQ comparison
+quorum/db.py                the product DB and the queries against it
+quorum/domains.py           internal / external / personal classification
+quorum/gong/                client.py · importer.py · identity.py      (step 0)
+quorum/crm/                 salesforce.py · hubspot.py                 (steps 3-5)
                             fieldmap.py — the resolved field map      (step 0b)
                             contact.py — what an adapter hands back
-quorom/enrich/              one module per enrichment provider, found by
+quorum/enrich/              one module per enrichment provider, found by
                             the package rather than imported by name  (5b)
-quorom/weekly/              people.py (1-3) · coverage.py (4) ·
+quorum/weekly/              people.py (1-3) · coverage.py (4) ·
                             stakeholders.py (5) · enrichment.py (5b) ·
                             workbook.py + view.py (6) ·
                             run.py — the sequence, and nothing else
-quorom/cli.py               quorom init · resolve-fields · import · weekly
+quorum/cli.py               quorum init · resolve-fields · import · weekly
 ```
 
 Sources are named per step: **DB** = your own Postgres (schema in
@@ -40,14 +40,14 @@ source, via the importer that fills DB.
 **Reads:** the command line, and `ACCOUNT_DOMAIN`.
 **Writes:** DB `accounts`, `user_focus_profiles`.
 
-The migrations create empty tables. `quorom init` creates the two rows that
+The migrations create empty tables. `quorum init` creates the two rows that
 everything else needs: the account (its name and internal domains) and an
 active focus profile (employee band, HQ geographies, seniority levels). Without
-the account, `quorom import` stops. Without the profile, `quorom weekly`
+the account, `quorum import` stops. Without the profile, `quorum weekly`
 refuses to start — see step 4.
 
 ```bash
-quorom init --internal-domains acme.com,acme.io \
+quorum init --internal-domains acme.com,acme.io \
             --employee-min 200 --employee-max 10000 \
             --geographies "North America" \
             --seniority c-level,vp,director
@@ -61,7 +61,7 @@ keeps the old one, inactive. A domain added later needs no `--replace`.
 A seniority level the CRM matching does not know is warned about at this point
 rather than discovered in an artifact — it would match nobody. A geography the
 ICP test cannot act on is *refused* here rather than warned about
-(`quorom/geography.py`); it used to be a warning, and a profile naming a region
+(`quorum/geography.py`); it used to be a warning, and a profile naming a region
 the test did not know applied no geography filter at all.
 
 ---
@@ -79,7 +79,7 @@ run that dies at the next customer — and it is per-customer differentiation
 living in code. **The repository holds patterns, never names** (README, "CRM
 field map").
 
-`quorom init` resolves the map; `quorom resolve-fields` re-resolves it when an
+`quorum init` resolves the map; `quorum resolve-fields` re-resolves it when an
 admin adds a field or a package is installed, superseding the active version and
 keeping the old one so last week's artifact stays explicable.
 
@@ -119,12 +119,12 @@ fall back to standard fields only.
 **Writes:** DB `meetings`, `attendees`, and — through the dedupe step —
 `people`, `person_identifiers`, `person_attendees`.
 
-`quorom import` with no arguments imports the last `RECENT_DAYS` days —
+`quorum import` with no arguments imports the last `RECENT_DAYS` days —
 the same window `Recent contact?` is answered against (step 5). It is derived
 rather than fixed so the two cannot drift: importing less than the recency
 window would put "no" against people who were met inside it, and a deployment
 should not have to pick a number to get started. `--from … --to …` extends the
-history beyond it; `quorom import --yesterday` is the overnight run.
+history beyond it; `quorum import --yesterday` is the overnight run.
 
 The counts it prints carry the elapsed time, because the question they get
 asked is whether to extend the range — calls-in-range and the time they took
@@ -153,7 +153,7 @@ import succeeds. The second one, over any range that overlaps it, raises — so 
 backfill looks clean on Friday and the overnight job dies on Saturday, with
 nothing in between to suggest why.
 
-The port therefore guards every write, all in `quorom/gong/`:
+The port therefore guards every write, all in `quorum/gong/`:
 
 | Write | Guard |
 |---|---|
@@ -282,7 +282,7 @@ absent profile makes the ICP test pass everything, so the run would complete,
 the workbook would have its usual shape, and every company met that week would
 be reported as a target; a reader could not tell that from a correct run. The
 profile is read and required at the top of `run_weekly` so the failure costs a
-second rather than every CRM call above it. `quorom init` creates one.
+second rather than every CRM call above it. `quorum init` creates one.
 `Account type` is captured and displayed but is **not** a filter. In one org
 every value present on a week's companies was a customer or lifecycle label, so
 gating on it removed nearly the whole ICP-fit set. `Type` is a per-org picklist
@@ -293,16 +293,16 @@ you can see what yours holds before turning it on.
 The firmographics query names no non-standard field: every one comes from the
 resolved map (step 0b), so an org with no managed data package installed reads
 `NumberOfEmployees` + `Billing*` without a line of code changing. That is
-`quorom/crm/salesforce.py` contains no `__c` name, and a test asserts it.
+`quorum/crm/salesforce.py` contains no `__c` name, and a test asserts it.
 
 `Meets profile?`'s geography half compares the HQ **country** as a whole value
-against the profile's selections (`quorom/geography.py`). The test it replaced
+against the profile's selections (`quorum/geography.py`). The test it replaced
 substring-matched a country list against the joined "city, state, country"
 display string, which is why that list carried `" us"` with a leading space — to
 stop `us` matching inside `Australia`. Selections are `{level, value}` at region
 or country level, three regions (North America, EMEA, APAC), and a bare string
 reads as a region so profiles written before levels keep working. A region or
-country the test does not know is refused at `quorom init` and again before a
+country the test does not know is refused at `quorum init` and again before a
 run starts: it used to be accepted, apply no geography filter at all, and pass
 every company met.
 
@@ -420,7 +420,7 @@ makes the counts comparable week to week.
 
 Nothing is written back to any system. `MobilePhone` is reduced to a boolean in
 the dump — sensitive contact fields pass through to the CRM, never into a
-Quorom store.
+Quorum store.
 
 ---
 
@@ -431,17 +431,17 @@ pip install -e .
 cp .env.example .env          # then fill it in
 psql "$DATABASE_URL" -f migrations/0001_core.sql  # …and 0002, 0003, 0004
 
-quorom init --internal-domains acme.com --employee-min 200 \
+quorum init --internal-domains acme.com --employee-min 200 \
             --employee-max 10000 --geographies "North America" \
             --seniority c-level,vp,director        # once
 
-quorom import                                    # the last RECENT_DAYS days
-quorom import --from 2025-10-01 --to 2026-08-24   # a longer history
-quorom import --yesterday                          # the overnight run
-WEEK_START=2026-08-17 quorom weekly                # the artifact
+quorum import                                    # the last RECENT_DAYS days
+quorum import --from 2025-10-01 --to 2026-08-24   # a longer history
+quorum import --yesterday                          # the overnight run
+WEEK_START=2026-08-17 quorum weekly                # the artifact
 ```
 
-`quorom weekly` writes into `OUTPUT_DIR`: the workbook, the JSON dump of every
+`quorum weekly` writes into `OUTPUT_DIR`: the workbook, the JSON dump of every
 input, the summary's counts, the single-page HTML view, and `last_run.json` —
 the manifest naming those four and the week they belong to, so a delivery or archival step can find
 them without rebuilding the filename pattern or parsing the run's log. It writes
@@ -459,7 +459,7 @@ is covered the same way, off and on, against a stubbed provider — including a
 lookup that returns someone other than the person asked about. The CRM
 legs themselves are typically unreachable from an agent session and have to be
 verified on a machine that can reach them, by diffing a workbook against a
-known-good run for the same week. Point `QUOROM_TEST_DSN` at a Postgres a test
+known-good run for the same week. Point `QUORUM_TEST_DSN` at a Postgres a test
 may create databases on; without it the database tests skip rather than fail.
 
 ## Where it runs

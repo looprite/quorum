@@ -24,12 +24,12 @@ from types import SimpleNamespace
 import pytest
 from openpyxl import load_workbook
 
-from quorom.crm.contact import Contact
-from quorom.weekly import coverage as coverage_mod
-from quorom.weekly import people as people_mod
-from quorom.weekly import stakeholders as stakeholders_mod
-from quorom.weekly import view as view_mod
-from quorom.weekly import workbook as workbook_mod
+from quorum.crm.contact import Contact
+from quorum.weekly import coverage as coverage_mod
+from quorum.weekly import people as people_mod
+from quorum.weekly import stakeholders as stakeholders_mod
+from quorum.weekly import view as view_mod
+from quorum.weekly import workbook as workbook_mod
 
 # Everything in the output that exists to compare one CRM with the other.
 # Each must appear only when both are configured.

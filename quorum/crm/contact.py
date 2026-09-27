@@ -12,7 +12,7 @@ Six fields, each one read by a column:
   email          the key meeting history is joined on
   mobile         tab 1 and tab 3 'Mobile in CRM?' — presence only. The number
                  itself never leaves the CRM: sensitive contact fields pass
-                 through to it and never into a Quorom store.
+                 through to it and never into a Quorum store.
   linkedin       tab 1 'LinkedIn?' and tab 3 'LinkedIn'
   last_activity  one of the two sources behind tab 3 'Recent contact?'
 

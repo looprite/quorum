@@ -1,6 +1,6 @@
 """LeadIQ as an enrichment provider — its GraphQL API, read-only.
 
-The only file under `quorom/` that names this provider. Everything else asks the
+The only file under `quorum/` that names this provider. Everything else asks the
 `enrich` package for whichever provider is configured, so the rest of the
 pipeline reads `display_name` rather than spelling it.
 

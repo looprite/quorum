@@ -1,4 +1,4 @@
--- Quorom v1 — 0003_focus_profile: the per-account ICP configuration
+-- Quorum v1 — 0003_focus_profile: the per-account ICP configuration
 --
 -- The focus profile drives the whole product: it decides which companies are
 -- ICP fits (employee band + HQ geography) and which titles clear the seniority
@@ -10,9 +10,9 @@
 -- titles are senior enough to list. It is not per-contact scoring — there is
 -- no such feature here, and the profile is not a ranking input.
 --
--- Read by FOCUS_PROFILE_SQL in quorom/db.py. The ICP test is applied in
--- quorom/weekly/coverage.py; the seniority terms it carries are used by
--- quorom/weekly/stakeholders.py.
+-- Read by FOCUS_PROFILE_SQL in quorum/db.py. The ICP test is applied in
+-- quorum/weekly/coverage.py; the seniority terms it carries are used by
+-- quorum/weekly/stakeholders.py.
 --
 -- The profile is scoped to the ACCOUNT, not to a user. A per-user profile
 -- would need a `users` table and a hosted auth system to key off, and this

@@ -1,11 +1,11 @@
 """Entry points.
 
-    quorom init --internal-domains … --employee-min … …  # once, after the migrations
-    quorom resolve-fields                                # re-read the CRM's schema
-    quorom import                                        # the last RECENT_DAYS days
-    quorom import --from 2025-10-01 --to 2026-08-24      # a longer history
-    quorom import --yesterday                            # the overnight run
-    quorom weekly                                        # the artifact
+    quorum init --internal-domains … --employee-min … …  # once, after the migrations
+    quorum resolve-fields                                # re-read the CRM's schema
+    quorum import                                        # the last RECENT_DAYS days
+    quorum import --from 2025-10-01 --to 2026-08-24      # a longer history
+    quorum import --yesterday                            # the overnight run
+    quorum weekly                                        # the artifact
 
 All three read their configuration from the environment. None writes to any
 system other than the product database (init, import) or the local output
@@ -105,7 +105,7 @@ def cmd_init(args, cfg: Config) -> int:
     for warning in result.warnings:
         print(f"[!] {warning}", file=sys.stderr)
     sys.stderr.flush()
-    print("[*] Next: quorom import")
+    print("[*] Next: quorum import")
     return 0
 
 
@@ -124,7 +124,7 @@ def _resolve_into(conn, account_id: str, cfg: Config, force: bool = False):
     if existing and not force:
         return (
             f"Field map v{existing} already resolved — left alone. "
-            "Re-read the org's schema with `quorom resolve-fields`."
+            "Re-read the org's schema with `quorum resolve-fields`."
         )
     field_map, provenance = resolve(sf)
     return bootstrap.install_field_map(conn, account_id, field_map, provenance)
@@ -152,7 +152,7 @@ def cmd_resolve_fields(args, cfg: Config) -> int:
             account_id = db.account_id(conn, cfg)
             if not account_id:
                 print(
-                    f"[!] No account named {cfg.account!r}. Run `quorom init` first.",
+                    f"[!] No account named {cfg.account!r}. Run `quorum init` first.",
                     file=sys.stderr,
                 )
                 return 2
@@ -296,7 +296,7 @@ def cmd_weekly(args, cfg: Config) -> int:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(prog="quorom")
+    parser = argparse.ArgumentParser(prog="quorum")
     sub = parser.add_subparsers(dest="command", required=True)
 
     p_init = sub.add_parser(

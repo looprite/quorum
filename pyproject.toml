@@ -1,5 +1,5 @@
 [project]
-name = "quorom"
+name = "quorum"
 version = "0.1.0"
 description = "Post-meeting stakeholder maps for company-to-company engagement"
 requires-python = ">=3.11"
@@ -13,20 +13,24 @@ dependencies = [
 dev = ["pytest>=8.0", "python-dotenv>=1.0"]
 
 [project.scripts]
-quorom = "quorom.cli:main"
+quorum = "quorum.cli:main"
+# Compatibility alias — an existing deployment's scripts still invoke
+# `quorom`. Keep this until every deployment is confirmed switched to
+# `quorum`.
+quorom = "quorum.cli:main"
 
 [build-system]
 requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
-include = ["quorom*"]
+include = ["quorum*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 # Several test modules import each other's fixtures as `tests.<module>`, so the
 # project root has to be importable. Do not rely on the editable install for
-# this: a PEP 660 install exposes only what packages.find declares (quorom*),
+# this: a PEP 660 install exposes only what packages.find declares (quorum*),
 # so `import tests` fails on a fresh environment even though it worked under
 # the older setuptools .pth behaviour.
 pythonpath = ["."]

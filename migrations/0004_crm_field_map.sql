@@ -1,4 +1,4 @@
--- Quorom v1 — 0004_crm_field_map: the resolved API names of every non-standard
+-- Quorum v1 — 0004_crm_field_map: the resolved API names of every non-standard
 -- field the pipeline reads.
 --
 -- The README's rule (CRM field map): the pipeline never hardcodes a
@@ -9,8 +9,8 @@
 -- The repository holds the patterns; the resolved names live here.
 --
 -- Provenance: README 'CRM field map'. Resolution is
--- `quorom/crm/fieldmap.py`, run by `quorom init` and re-run by
--- `quorom resolve-fields`.
+-- `quorum/crm/fieldmap.py`, run by `quorum init` and re-run by
+-- `quorum resolve-fields`.
 --
 -- Why this is a table of its own rather than more keys in the focus profile:
 -- the two are different kinds of configuration with different authors. The

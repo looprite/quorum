@@ -9,9 +9,9 @@ from __future__ import annotations
 import psycopg
 import pytest
 
-from quorom import geography
-from quorom.weekly.coverage import meets_profile
-from quorom.weekly.run import run_weekly
+from quorum import geography
+from quorum.weekly.coverage import meets_profile
+from quorum.weekly.run import run_weekly
 
 from tests.test_import_and_weekly import ACCOUNT, _cfg, _import
 
@@ -148,7 +148,7 @@ def test_the_icp_test_does_not_judge_data_it_never_fetched():
     verdict about data nobody looked up. Worse, this test is also the filter
     feeding tab 3, so a False here silently empties the stakeholder map.
     """
-    from quorom.weekly.coverage import NOT_ASSESSED
+    from quorum.weekly.coverage import NOT_ASSESSED
 
     fetched = meets_profile(PROFILE, None, "")
     never_fetched = meets_profile(PROFILE, None, "", firmographics_fetched=False)

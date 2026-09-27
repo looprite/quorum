@@ -1,7 +1,7 @@
 # Migrations
 
 The v1 schema. Applied once per deployment, against a database in your own
-environment. There is no Quorom-owned database.
+environment. There is no Quorum-owned database.
 
 Apply in filename order:
 
@@ -12,7 +12,7 @@ psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/0003_focus_profile.sql
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/0004_crm_field_map.sql
 ```
 
-They create empty tables. `quorom init` writes the rows a deployment cannot
+They create empty tables. `quorum init` writes the rows a deployment cannot
 start without — the account, its active focus profile, and the resolved CRM
 field map — and is the next step after the files above (`docs/pipeline.md`,
 steps 0a and 0b).

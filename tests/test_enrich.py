@@ -17,15 +17,15 @@ from types import SimpleNamespace
 import pytest
 from openpyxl import load_workbook
 
-from quorom import enrich
-from quorom.crm.contact import Contact
-from quorom.enrich import Company, Person
-from quorom.weekly import coverage as coverage_mod
-from quorom.weekly import enrichment
-from quorom.weekly import people as people_mod
-from quorom.weekly import stakeholders as stakeholders_mod
-from quorom.weekly import view as view_mod
-from quorom.weekly import workbook as workbook_mod
+from quorum import enrich
+from quorum.crm.contact import Contact
+from quorum.enrich import Company, Person
+from quorum.weekly import coverage as coverage_mod
+from quorum.weekly import enrichment
+from quorum.weekly import people as people_mod
+from quorum.weekly import stakeholders as stakeholders_mod
+from quorum.weekly import view as view_mod
+from quorum.weekly import workbook as workbook_mod
 
 PROFILE = {
     "employee_count_min": 50,
@@ -146,7 +146,7 @@ class _Provider:
     }
 
     def person_by_linkedin(self, url):
-        from quorom.enrich import linkedin_handle
+        from quorum.enrich import linkedin_handle
 
         self.linkedin_calls.append(url)
         return self.by_linkedin.get(linkedin_handle(url))
@@ -322,7 +322,7 @@ def test_people_not_in_the_crm_get_a_name_title_and_linkedin(tmp_path):
 def test_the_summary_counts_what_the_provider_found_and_the_queue(tmp_path):
     """Ari is found; Kim and Pat are not; the shared inbox is never looked up,
     so it is in neither number."""
-    from quorom.weekly import summary as summary_mod
+    from quorum.weekly import summary as summary_mod
 
     cfg, sf, hs = _cfg(), _SF(), _HS()
     people = _attendees()
@@ -444,8 +444,8 @@ def test_the_weekly_run_checks_the_provider_first_and_adds_the_review_queue(
     The config is a stub, not Config(): it borrows Config's two week methods
     and nothing else, so nothing is read from the environment.
     """
-    from quorom.config import Config
-    from quorom.weekly import run as run_mod
+    from quorum.config import Config
+    from quorum.weekly import run as run_mod
     from tests.test_import_and_weekly import (
         ACCOUNT, _import, _seed_account, _seed_profile,
     )

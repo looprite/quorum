@@ -1,6 +1,6 @@
 """The enrichment pass — a provider's second opinion, set beside the CRM's.
 
-Runs only when an enrichment provider is configured (see `quorom/enrich/`), and
+Runs only when an enrichment provider is configured (see `quorum/enrich/`), and
 changes nothing when one is not. Serves:
 
   tab 1  Name, Title and LinkedIn (provider) — for people not in the CRM
@@ -258,7 +258,7 @@ QUEUE_ORDER = (
 def review_queue(pass_: _Cached, coverage: list[dict], rows: list[dict]) -> list[dict]:
     """Every item a person should settle, and nothing else.
 
-    Written as a work queue rather than as CRM updates: Quorom writes nothing to
+    Written as a work queue rather than as CRM updates: Quorum writes nothing to
     the CRM, and whoever works through this list may not have CRM access at all.
     Each row says what to check and where.
     """

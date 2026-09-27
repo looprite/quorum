@@ -8,9 +8,9 @@ from __future__ import annotations
 
 import pytest
 
-from quorom import enrich
-from quorom.enrich import Company, Person
-from quorom.enrich.leadiq import (
+from quorum import enrich
+from quorum.enrich import Company, Person
+from quorum.enrich.leadiq import (
     COMPANY_QUERY,
     PERSON_QUERY,
     PROVIDER,
@@ -198,7 +198,7 @@ def test_a_graphql_error_raises():
 
 
 def test_throttling_is_waited_out(monkeypatch):
-    monkeypatch.setattr("quorom.enrich.leadiq.time.sleep", lambda s: None)
+    monkeypatch.setattr("quorum.enrich.leadiq.time.sleep", lambda s: None)
     post = _Post(_Resp(status=429), _people())
 
     assert LeadIQ(KEY, post=post).person_by_email("dana@acme.example") is None

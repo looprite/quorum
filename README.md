@@ -1,4 +1,4 @@
-# Quorom
+# Quorum
 
 Post-meeting stakeholder maps for company-to-company engagement.
 
@@ -153,11 +153,11 @@ for, is not something that ships. Provenance is visible.
 
 Build once, deploy per customer. This repository is the single source of truth.
 Each deployment is single-tenant, inside its own environment, reading its own
-systems. No data and no credentials live here or in any Quorom-operated store.
+systems. No data and no credentials live here or in any Quorum-operated store.
 
 - **Where it runs.** Inside your trust boundary. Your database holds the
   meeting-identity graph; sensitive contact fields — email, phone — pass through
-  to your CRM and are never persisted by Quorom. Data residency is solved by
+  to your CRM and are never persisted by Quorum. Data residency is solved by
   *where it runs*.
 - **Transport is yours.** How the code lands in your environment — your GitLab
   and runners, a GitHub Actions pipeline, a container image in your cloud — is
@@ -209,7 +209,7 @@ docs/salesforce-access.md       the two Salesforce auth modes
 docs/paas-deployment.md         worked example: running the schedule on a PaaS
 docs/slack-delivery.md          worked example: delivering a run to Slack
 migrations/                     the schema, applied in filename order
-quorom/                         the pipeline
+quorum/                         the pipeline
 tests/                          run with `pytest`
 ```
 
@@ -219,7 +219,7 @@ tests/                          run with `pytest`
 
 Business Source License 1.1 — see `LICENSE`.
 
-In short: you may use Quorom to produce stakeholder maps for your own
+In short: you may use Quorum to produce stakeholder maps for your own
 organisation, including deploying it in infrastructure you control. You may not
 provide it, or a derivative of it, to third parties as a hosted or managed
 service. Four years after each version is first made publicly available, that
@@ -234,6 +234,6 @@ paragraph above is not.
 sole and undivided, which is what keeps relicensing a decision that can still be
 made — a licence can be loosened later, never tightened.
 
-This is not a comment on anyone's code. If you are running Quorom and something
+This is not a comment on anyone's code. If you are running Quorum and something
 needs to change, say so rather than patching locally: a local patch is a fork,
 and a fork can take no update. See `docs/setup.md` §1.

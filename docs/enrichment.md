@@ -6,7 +6,7 @@ covers what changes when one is configured.
 
 **The one provider implemented is LeadIQ**, through its GraphQL API. Nothing
 else in the repository names it — the pipeline asks for "the configured
-provider" — so a second provider is one new module in `quorom/enrich/`.
+provider" — so a second provider is one new module in `quorum/enrich/`.
 
 ---
 
@@ -24,7 +24,7 @@ disagreements are visible and a person can settle them.
 - **The provider** is a second opinion. It can be out of date too.
 - **LinkedIn** is what a person checks by hand, and the one that settles it.
 
-So a provider value **never replaces** a CRM value. Quorom still writes nothing
+So a provider value **never replaces** a CRM value. Quorum still writes nothing
 to your CRM. The output is a list of disagreements — tab 4, the review queue —
 for someone to work through and apply in the CRM themselves. That someone does
 not need CRM access to do the checking, which is deliberate.

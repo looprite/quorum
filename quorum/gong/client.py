@@ -1,7 +1,7 @@
 """Gong API client.
 
 Two endpoints: the call list and call details. Gong's transcript endpoint is
-deliberately not called — Quorom stores meeting metadata and attendees, not
+deliberately not called — Quorum stores meeting metadata and attendees, not
 transcript text, and `meetings` has no column to put it in.
 """
 

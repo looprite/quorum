@@ -1,4 +1,4 @@
-"""`quorom init`, and the run that now refuses to start without what it writes.
+"""`quorum init`, and the run that now refuses to start without what it writes.
 
 Two things are being pinned. First, that init writes exactly what the pipeline
 reads — same database, same queries, no fixture in between. Second, that a
@@ -13,10 +13,10 @@ from __future__ import annotations
 import psycopg
 import pytest
 
-from quorom import bootstrap, db
-from quorom.cli import main
-from quorom.config import Config
-from quorom.weekly.run import MissingFocusProfile, run_weekly
+from quorum import bootstrap, db
+from quorum.cli import main
+from quorum.config import Config
+from quorum.weekly.run import MissingFocusProfile, run_weekly
 
 from tests.test_import_and_weekly import ACCOUNT, _cfg, _import
 
@@ -147,7 +147,7 @@ def test_weekly_refuses_without_a_focus_profile(database, gong_calls, tmp_path):
     account_id = _seed_account_only(database)
     _import(database, account_id, gong_calls)
 
-    with pytest.raises(MissingFocusProfile, match="quorom init"):
+    with pytest.raises(MissingFocusProfile, match="quorum init"):
         run_weekly(_cfg(database, tmp_path), log=lambda *_: None)
 
     # Nothing half-written, and nothing to mistake for a real artifact.
@@ -268,7 +268,7 @@ def test_cli_init_reports_and_then_refuses_to_repeat(database, monkeypatch, caps
     out = capsys.readouterr().out
     assert "Account northwind.com created" in out
     assert "Focus profile v1 created" in out
-    assert "quorom import" in out          # the next step, not just the failure
+    assert "quorum import" in out          # the next step, not just the failure
 
     # The same command again is a no-op, not a second profile.
     assert main(argv) == 0

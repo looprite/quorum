@@ -10,11 +10,11 @@ import pytest
 import requests
 from openpyxl import load_workbook
 
-from quorom import db
-from quorom.config import Config
-from quorom.gong.importer import import_range
-from quorom.weekly.run import run_weekly
-from quorom.weekly.stakeholders import NO_SENIOR_CONTACT
+from quorum import db
+from quorum.config import Config
+from quorum.gong.importer import import_range
+from quorum.weekly.run import run_weekly
+from quorum.weekly.stakeholders import NO_SENIOR_CONTACT
 
 ACCOUNT = "northwind.com"
 
@@ -194,7 +194,7 @@ def test_weekly_runs_without_a_crm(database, gong_calls, tmp_path):
     ],
 )
 def test_a_role_inbox_is_flagged_even_when_it_has_a_name(name, email, expected):
-    from quorom.weekly.people import person_flag
+    from quorum.weekly.people import person_flag
 
     assert person_flag(name, email) == expected
 
@@ -274,7 +274,7 @@ def test_a_week_that_has_not_finished_says_so(database, gong_calls, tmp_path):
     ],
 )
 def test_a_linkedin_profile_renders_short_and_clickable(stored, handle):
-    from quorom.weekly.view import cell
+    from quorum.weekly.view import cell
 
     _, rendered = cell("LinkedIn", stored)
     assert rendered == (
@@ -315,7 +315,7 @@ def test_a_linkedin_profile_renders_short_and_clickable(stored, handle):
     ],
 )
 def test_linkedin_ids_and_sales_nav_render_as_a_short_label(stored, href, label):
-    from quorom.weekly.view import cell
+    from quorum.weekly.view import cell
 
     _, rendered = cell("LinkedIn", stored)
     assert rendered == f'<a href="{href}">{label}</a>'
@@ -336,7 +336,7 @@ def test_recent_contact_puts_the_date_first(history, activity, expected):
     import datetime as dt
     from types import SimpleNamespace
 
-    from quorom.weekly.stakeholders import recent_contact
+    from quorum.weekly.stakeholders import recent_contact
 
     d = (dt.date.today() - dt.timedelta(days=3)).isoformat()
     cfg = SimpleNamespace(recent_days=90, group_call_min=8)
@@ -358,7 +358,7 @@ def test_tab_1_states_what_was_never_asked(database, gong_calls, tmp_path):
     gives for a provider that was never queried — the tab survives because who
     attended comes from the meeting source, not the CRM. So is the in-CRM
     column: with no CRM there is nothing to be in."""
-    from quorom.crm.fieldmap import NOT_CHECKED
+    from quorum.crm.fieldmap import NOT_CHECKED
 
     account_id = _seed_account(database)
     _import(database, account_id, gong_calls)
@@ -381,9 +381,9 @@ def test_tab_1_states_what_was_never_asked(database, gong_calls, tmp_path):
     # The rest is asserted against reconcile() directly: the fixture has no
     # nameless attendee, so going through the workbook would leave the
     # name-check half of this proving nothing.
-    from quorom.crm.hubspot import HubSpot
-    from quorom.crm.salesforce import Salesforce
-    from quorom.weekly.people import reconcile
+    from quorum.crm.hubspot import HubSpot
+    from quorum.crm.salesforce import Salesforce
+    from quorum.weekly.people import reconcile
 
     cfg = _cfg(database, tmp_path)
     sf, hs = Salesforce(cfg), HubSpot(cfg)
@@ -469,7 +469,7 @@ def test_manifest_is_written_only_after_retention_succeeds(
 ):
     """Its presence has to mean the run finished. Retention is the last thing
     that can fail, so the manifest must come after it, not before."""
-    from quorom.weekly.run import MissingRunOutputsTable
+    from quorum.weekly.run import MissingRunOutputsTable
 
     account_id = _seed_account(database)
     _import(database, account_id, gong_calls)
@@ -539,7 +539,7 @@ def test_retention_rerun_appends(database, gong_calls, tmp_path):
 
 def test_retention_partial_failure_leaves_no_rows(database, tmp_path):
     """One good file, one missing — the transaction must not keep the good one."""
-    from quorom.weekly import retention
+    from quorum.weekly import retention
 
     good_xlsx = tmp_path / "run.xlsx"
     good_xlsx.write_bytes(b"fake-xlsx-bytes")
@@ -565,7 +565,7 @@ def test_retention_on_without_migration_stops_before_any_crm_call(
 ):
     """RETAIN_RUNS on with 0005 unapplied must fail immediately — not on the
     last line of the run, after every Gong and CRM call."""
-    from quorom.weekly.run import MissingRunOutputsTable
+    from quorum.weekly.run import MissingRunOutputsTable
 
     account_id = _seed_account(database)
     _import(database, account_id, gong_calls)
@@ -671,7 +671,7 @@ def test_workbook_columns_follow_the_crms_configured(
     """
     from types import SimpleNamespace
 
-    from quorom.weekly.workbook import NO_RECORD, build_workbook
+    from quorum.weekly.workbook import NO_RECORD, build_workbook
 
     cfg = SimpleNamespace(
         hubspot=SimpleNamespace(configured=hs_on),
@@ -768,7 +768,7 @@ def test_the_map_filter_keeps_a_company_it_could_not_assess():
     test AND for one the test could not run on, so filtering on it alone drops
     the second kind off tab 3 — a company disappearing from the map because
     data nobody fetched did not clear a bar."""
-    from quorom.weekly.stakeholders import companies_for_map
+    from quorum.weekly.stakeholders import companies_for_map
 
     coverage = [
         {"domain": "target.com", "assessed": True, "is_target": True},
@@ -795,8 +795,8 @@ def test_no_crm_does_not_silently_empty_the_stakeholder_map(
     as "nobody worth considering this week", which is a finding a reader would
     act on, rather than "the test never ran".
     """
-    from quorom.weekly.coverage import NOT_ASSESSED
-    from quorom.weekly.stakeholders import ICP_NOT_ASSESSED
+    from quorum.weekly.coverage import NOT_ASSESSED
+    from quorum.weekly.stakeholders import ICP_NOT_ASSESSED
 
     account_id = _seed_account(database)
     _import(database, account_id, gong_calls)
@@ -881,7 +881,7 @@ def test_group_call_is_labelled_not_judged(database, gong_calls):
     with psycopg.connect(database) as conn:
         history = db.met_history(conn, cfg, ["acme.com"])
 
-    from quorom.weekly.stakeholders import recent_contact
+    from quorum.weekly.stakeholders import recent_contact
 
     trainee = history["trainee1@acme.com"]
     assert trainee["smallest_meeting"] == 9      # above GROUP_CALL_MIN of 8
@@ -902,13 +902,13 @@ def test_group_call_is_labelled_not_judged(database, gong_calls):
     ],
 )
 def test_seniority_ordering(title, rank):
-    from quorom.weekly.stakeholders import seniority_rank
+    from quorum.weekly.stakeholders import seniority_rank
 
     assert seniority_rank(title) == rank
 
 
 def test_soql_quoting():
-    from quorom.crm.salesforce import soql_quote
+    from quorum.crm.salesforce import soql_quote
 
     assert soql_quote("o'brien@acme.com") == "o\\'brien@acme.com"
     assert soql_quote("a\\b") == "a\\\\b"
@@ -938,7 +938,7 @@ class _Resp:
 @pytest.fixture
 def hubspot_calls(monkeypatch):
     """Script HubSpot's replies; return the recorded sleeps and request count."""
-    from quorom.crm import hubspot as hs_mod
+    from quorum.crm import hubspot as hs_mod
 
     state = {"sent": [], "slept": []}
 
@@ -964,8 +964,8 @@ def _client():
     """
     from types import SimpleNamespace
 
-    from quorom.config import HubSpotConfig
-    from quorom.crm.hubspot import HubSpot
+    from quorum.config import HubSpotConfig
+    from quorum.crm.hubspot import HubSpot
 
     return HubSpot(SimpleNamespace(hubspot=HubSpotConfig(api_key="test-key")))
 
@@ -991,7 +991,7 @@ def test_hubspot_honours_retry_after(hubspot_calls):
 
 
 def test_hubspot_caps_a_huge_retry_after(hubspot_calls):
-    from quorom.crm.hubspot import MAX_BACKOFF
+    from quorum.crm.hubspot import MAX_BACKOFF
 
     state = hubspot_calls(
         [_Resp(429, headers={"Retry-After": "86400"}), _Resp(200, {"total": 0})]
@@ -1002,7 +1002,7 @@ def test_hubspot_caps_a_huge_retry_after(hubspot_calls):
 
 
 def test_hubspot_gives_up_loudly_when_throttling_persists(hubspot_calls):
-    from quorom.crm.hubspot import HubSpotRateLimited, MAX_ATTEMPTS
+    from quorum.crm.hubspot import HubSpotRateLimited, MAX_ATTEMPTS
 
     state = hubspot_calls([_Resp(429)] * MAX_ATTEMPTS)
 

@@ -1,23 +1,23 @@
-"""`quorom init` — the two rows a fresh deployment cannot start without.
+"""`quorum init` — the two rows a fresh deployment cannot start without.
 
 The migrations create empty tables. Two rows have to exist before the pipeline
 does anything useful, and this is what creates them:
 
   * the **account**, which every query in the product scopes on and which the
     importer reads `internal_domains` from to tell a colleague from a customer.
-    Without it `quorom import` stops and says so.
+    Without it `quorum import` stops and says so.
 
   * the **active focus profile**, which carries the ICP test (employee band, HQ
     geography) and the seniority bar behind the stakeholder list. Without it a
     run would have no ICP test to apply, and every company met would pass — an
-    artifact that looks entirely normal and is wrong. `quorom.weekly.run`
+    artifact that looks entirely normal and is wrong. `quorum.weekly.run`
     refuses to start without one; this module is how you satisfy it.
 
 A third row is written where a CRM is reachable: the **resolved field map**
 (`crm/fieldmap.py`), which is what lets every Salesforce query name
 standard fields plus whatever this org actually calls the rest. It is resolved
 by describing and counting rather than typed by anyone, and re-resolved by
-`quorom resolve-fields` when the org's schema moves.
+`quorum resolve-fields` when the org's schema moves.
 
 Everything written here is account configuration, not customer data. Nothing
 customer-specific is in this file: the values come from the command line, the
@@ -36,7 +36,7 @@ from .config import Config
 from . import geography
 from .weekly.coverage import SENIORITY_KEYWORDS
 
-NOTE = "created by quorom init"
+NOTE = "created by quorum init"
 
 
 class InitError(RuntimeError):
@@ -330,8 +330,8 @@ def install_field_map(
 
 
 def has_field_map(conn: psycopg.Connection, account_id: str) -> Optional[int]:
-    """The active map's version, or None. `quorom init` leaves an existing map
-    alone — re-resolving is `quorom resolve-fields`, on purpose."""
+    """The active map's version, or None. `quorum init` leaves an existing map
+    alone — re-resolving is `quorum resolve-fields`, on purpose."""
     with conn.cursor() as cur:
         cur.execute(
             "select version_number from crm_field_maps "

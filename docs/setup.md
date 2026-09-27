@@ -1,4 +1,4 @@
-# Setting Quorom up
+# Setting Quorum up
 
 From nothing to a weekly stakeholder map. Written for someone who can run
 commands and read an error, most likely working alongside an agent reading this
@@ -36,14 +36,14 @@ stated rather than a footnote.
 configuration.**
 
 - *"Our Salesforce field is called something else."* Nothing in this repository
-  names a non-standard Salesforce field. At setup, `quorom init` reads your
+  names a non-standard Salesforce field. At setup, `quorum init` reads your
   org's own description of `Account` and `Contact`, matches fields against
   generic patterns, counts how many records actually have each one populated,
   and stores the result. Every query is then built from that map.
-  `quorom resolve-fields` re-runs it when your admin adds a field.
+  `quorum resolve-fields` re-runs it when your admin adds a field.
   See `docs/supported-configuration.md`.
 - *"Our ICP is different."* Employee band, HQ geography and the seniority bar
-  are the focus profile — arguments to `quorom init`, stored in your database.
+  are the focus profile — arguments to `quorum init`, stored in your database.
 
 If you find something that genuinely requires a code change, that is an upstream
 change. Raise it. Do not patch it locally: a local patch is a fork wearing a
@@ -138,10 +138,10 @@ the text says otherwise.
 - **The application.** On macOS that is **Terminal** — Applications → Utilities
   → Terminal, or ⌘-Space and type "Terminal". This guide has been walked
   end to end on macOS only; other platforms are untested here.
-- **The directory.** If you have no convention of your own, use **`~/quorom`**
-  — a folder named `quorom` in your home directory. Section 8 creates it by
+- **The directory.** If you have no convention of your own, use **`~/quorum`**
+  — a folder named `quorum` in your home directory. Section 8 creates it by
   cloning into it, and every command after that assumes you are inside it.
-  `cd ~/quorom` gets you back there in a new terminal.
+  `cd ~/quorum` gets you back there in a new terminal.
 - **Angle brackets are deleted, not typed.** Where a command or a template
   contains something like `<paste the connection string here>` or
   `<YOUR REPO URL>`, replace the whole thing — brackets and all — with your own
@@ -211,9 +211,9 @@ assumes.
 
 Create a project in Claude. All three fields, ready to fill in and paste:
 
-**Name:** `Quorom — <YOUR COMPANY>`
+**Name:** `Quorum — <YOUR COMPANY>`
 
-**Description:** `Our Quorom deployment: weekly stakeholder maps from recorded
+**Description:** `Our Quorum deployment: weekly stakeholder maps from recorded
 meetings, reconciled against Salesforce. Code is read from upstream, never
 edited here.`
 
@@ -221,9 +221,9 @@ edited here.`
 rather than guessing:
 
 ```
-This project runs a Quorom deployment for <YOUR COMPANY>.
+This project runs a Quorum deployment for <YOUR COMPANY>.
 
-The code is upstream at github.com/looprite/quorom and is read-only to us.
+The code is upstream at github.com/looprite/quorum and is read-only to us.
 We never edit it, fork it or patch it. Read it there when you need to know how
 something behaves. Start with docs/setup.md, then README.md and
 docs/supported-configuration.md.
@@ -282,7 +282,7 @@ late.
 - **A secret shown once goes straight to your secret store.** Gong's Access Key
   Secret is the case that bites (section 3): displayed at creation, never again.
 - **Project instructions and tracker issues name where a secret lives, never
-  what it is** — "our secret store, key `QUOROM_DATABASE_URL`". Those texts are
+  what it is** — "our secret store, key `QUORUM_DATABASE_URL`". Those texts are
   permanent and visible to everyone in the workspace.
 - **If one lands somewhere it shouldn't, rotate it.** Deleting the message is
   not a rotation.
@@ -295,7 +295,7 @@ Read what you are about to paste.
 | Activity | What it needs |
 |---|---|
 | **Reading** — how does this behave, what does that flag do, what does `0002` create, why is it shaped this way | The URL. Nothing else. No clone, no credentials, no database. |
-| **Executing** — applying the migrations, `quorom init`, `quorom import`, `quorom weekly` | A clone on the workstation of section 3 — a machine that can reach your database, Gong and Salesforce. That is step 5, in section 8. |
+| **Executing** — applying the migrations, `quorum init`, `quorum import`, `quorum weekly` | A clone on the workstation of section 3 — a machine that can reach your database, Gong and Salesforce. That is step 5, in section 8. |
 
 Asking what `RECENT_DAYS` does needs nothing but the address, and you can do it
 right now. Running the weekly job needs a machine, a database, a virtualenv and
@@ -320,7 +320,7 @@ runs/               # if you keep runs here — see section 14
 README.md           # what this deployment is, who owns it, where the output goes
 ```
 
-What does **not** go in it: any file from `quorom/`, `migrations/`, `tests/` or
+What does **not** go in it: any file from `quorum/`, `migrations/`, `tests/` or
 `docs/`. Those are read from upstream. If you find yourself copying one in to
 change a line, stop and re-read section 1.
 
@@ -363,12 +363,12 @@ for saying where you are.
 
 ## 7. Step 4 — Salesforce access
 
-Do this before step 7, not after. `quorom init` resolves your CRM field map by
+Do this before step 7, not after. `quorum init` resolves your CRM field map by
 describing your org, and it can only do that if it can reach Salesforce. Run
 `init` with Salesforce unconfigured and you get an account with no field map;
 a later weekly run with Salesforce *configured* and no map stops rather than
 running — because every query would silently fall back to standard fields only
-and the output would be quietly wrong. (`quorom resolve-fields` fixes it, but
+and the output would be quietly wrong. (`quorum resolve-fields` fixes it, but
 it is easier not to get there.)
 
 Two ways in.
@@ -446,7 +446,7 @@ Four smaller things, each of which costs time:
 
 1. **The username must be globally unique across all of Salesforce, and does not
    have to be a real address.** A suffixed form such as
-   `quorom-integration@yourcompany.com.prod` works. The *email* field is
+   `quorum-integration@yourcompany.com.prod` works. The *email* field is
    separate and can be an existing monitored inbox.
 2. **Select objects by API name.** The object list is full of similar display
    names; `Account` and `Contact` are unambiguous.
@@ -506,17 +506,17 @@ chosen it yet, and nothing here depends on it.
 
 ```bash
 cd ~
-git clone https://github.com/looprite/quorom.git quorom
-cd ~/quorom
+git clone https://github.com/looprite/quorum.git quorum
+cd ~/quorum
 python3.12 -m venv .venv && source .venv/bin/activate   # any 3.11+ will do
 python -m pip install --upgrade pip
 pip install -e '.[dev]'
 ```
 
-`~/quorom` is the default this guide uses; substitute your own location if you
-have one, and read `~/quorom` as "wherever you cloned it" from here on. Note
+`~/quorum` is the default this guide uses; substitute your own location if you
+have one, and read `~/quorum` as "wherever you cloned it" from here on. Note
 that `source .venv/bin/activate`, like an `export`, applies to that terminal
-window only — a new tab needs it again before `quorom` is on the path.
+window only — a new tab needs it again before `quorum` is on the path.
 
 **Name the interpreter, and upgrade pip inside the venv.** Both lines are load-
 bearing on a stock Mac. `python3` there is 3.9 — section 3 had you check exactly
@@ -542,10 +542,10 @@ and `ACCOUNT_DOMAIN` missing while both sit correctly in the file. A deployed
 run is the case that genuinely wants the bare install — it takes its values
 from your environment's secret store and never has a `.env` to read.
 
-That gives you the `quorom` command. Check it:
+That gives you the `quorum` command. Check it:
 
 ```bash
-quorom --help
+quorum --help
 ```
 
 ### Create the database
@@ -563,7 +563,7 @@ Then create it:
 
 ```bash
 export ADMIN_DATABASE_URL="<paste the admin connection string here>"
-psql "$ADMIN_DATABASE_URL" -c "CREATE DATABASE quorom;"
+psql "$ADMIN_DATABASE_URL" -c "CREATE DATABASE quorum;"
 ```
 
 The angle brackets go too (section 3). Run that line verbatim and the export
@@ -588,7 +588,7 @@ Now set the connection string the rest of this guide uses. This one is
 app-scoped: it names the new database, not the instance.
 
 ```bash
-export DATABASE_URL="postgresql://user:password@host:5432/quorom"
+export DATABASE_URL="postgresql://user:password@host:5432/quorum"
 ```
 
 > **This lasts until you close the terminal**, like the venv above. In a fresh
@@ -596,7 +596,7 @@ export DATABASE_URL="postgresql://user:password@host:5432/quorom"
 > `could not connect to server: No such file or directory ... /tmp/.s.PGSQL.5432`
 > — an error that names a socket and never mentions the variable. Re-run the
 > `export` in each terminal, or put the value in the `.env` file of section 9,
-> which `quorom` reads on every run. `psql` does not read `.env`, so the
+> which `quorum` reads on every run. `psql` does not read `.env`, so the
 > migrations below need the export either way.
 
 ### If you must share a database: a dedicated schema
@@ -608,7 +608,7 @@ unqualified table names, so it uses whatever schema the search path resolves
 to.
 
 ```sql
-CREATE SCHEMA quorom;
+CREATE SCHEMA quorum;
 ```
 
 **Set the search path on the connecting role — never as a connection-string
@@ -616,7 +616,7 @@ parameter.** This is the important half, and the reason this is the alternative
 rather than the recommendation:
 
 ```sql
-ALTER ROLE quorom_app SET search_path = quorom;
+ALTER ROLE quorum_app SET search_path = quorum;
 ```
 
 A search path passed in the connection string (`options=-csearch_path=…` and
@@ -626,6 +626,11 @@ still run. They just run against the default schema, creating or reading the
 wrong tables, and nothing anywhere distinguishes that from working. Set on the
 role, the path is a property of the credential and travels with every
 connection it makes.
+
+`quorum` above is just this guide's example name — the pipeline emits
+unqualified table names and never hardcodes a schema, so an existing
+deployment keeps whatever schema name it already set up; there's nothing to
+migrate.
 
 Confirm it on the connection you are actually going to use, before you migrate:
 
@@ -681,10 +686,10 @@ tests that need a real PostgreSQL, and they skip silently when they cannot find
 one. A run that skips them is green on any machine with no database — which is
 to say green almost everywhere, including where something is genuinely broken.
 
-To run all of them, point `QUOROM_TEST_DSN` at a Postgres and run it again:
+To run all of them, point `QUORUM_TEST_DSN` at a Postgres and run it again:
 
 ```bash
-export QUOROM_TEST_DSN=postgresql://postgres@localhost:5432/postgres
+export QUORUM_TEST_DSN=postgresql://postgres@localhost:5432/postgres
 pytest
 ```
 
@@ -707,7 +712,7 @@ same names, no file.
 The four that a run cannot start without:
 
 ```bash
-DATABASE_URL=postgresql://user:password@host:5432/quorom
+DATABASE_URL=postgresql://user:password@host:5432/quorum
 ACCOUNT_DOMAIN=acme.com          # your own primary domain; names the account row
 GONG_ACCESS_KEY=
 GONG_ACCESS_KEY_SECRET=
@@ -739,14 +744,14 @@ output and want to change something:
 
 | Variable | Default | What it does |
 |---|---|---|
-| `RECENT_DAYS` | 90 | How far back still counts as recent contact — **and** how far back `quorom import` reaches with no dates given. One number deliberately: importing less than the recency window puts "no" next to people you met inside it. |
+| `RECENT_DAYS` | 90 | How far back still counts as recent contact — **and** how far back `quorum import` reaches with no dates given. One number deliberately: importing less than the recency window puts "no" next to people you met inside it. |
 | `SHORTLIST_SIZE` | 3 | People per company on the stakeholder list. The cap is a feature. |
 | `GROUP_CALL_MIN` | 8 | Above this many external attendees, a meeting is labelled a group call on the row — so a training webinar does not read as a relationship. |
 | `WEEK_START` | current week | Monday of the target week, `YYYY-MM-DD`. Unset, it means the week **containing today** — which is not the same as last week, and is the trap section 13 exists to warn about. Read §13 before scheduling anything. |
 | `TZ_OFFSET` | `-04` | The offset the week boundaries are cut on. |
 | `OUTPUT_DIR` | `output` | Where a run's output lands — the workbook, the JSON dump, the summary, the HTML view and `last_run.json`. |
 | `CUSTOMER_ACCOUNT_TYPES` | empty | Substrings of `Account.Type` marking an existing customer. Empty means the gate is off and ICP fit is employee band plus HQ geography only. Leave it off unless your `Type` field is genuinely maintained as a lifecycle field. |
-| `RETAIN_RUNS` | `false` | Store this run's `.xlsx`, `.json` and `.html` into `run_outputs` as the last step of `quorom weekly`. Off by default — a deployment that has not chosen retention must not silently start storing contact data. Section 14 has the migration and the grant this needs before turning it on. |
+| `RETAIN_RUNS` | `false` | Store this run's `.xlsx`, `.json` and `.html` into `run_outputs` as the last step of `quorum weekly`. Off by default — a deployment that has not chosen retention must not silently start storing contact data. Section 14 has the migration and the grant this needs before turning it on. |
 
 > **`python-dotenv` does not override an exported variable.** If you export
 > something in your shell, that one wins over `.env`. Verify which one the
@@ -757,11 +762,11 @@ output and want to change something:
 ## 10. Step 7 — Initialise
 
 Two rows have to exist before anything works: your account, and an active focus
-profile. `quorom init` creates both, and resolves the CRM field map while it is
+profile. `quorum init` creates both, and resolves the CRM field map while it is
 there.
 
 ```bash
-quorom init \
+quorum init \
   --internal-domains acme.com,acme.io \
   --employee-min 200 --employee-max 10000 \
   --geographies "North America" \
@@ -809,14 +814,14 @@ successful run, not a failed one:
 [✓] Account acme.com created · internal domains: acme.com, acme.io
 [✓] Focus profile v1 created · 200-10000 employees · NA · c-level, vp, director
 [i] Salesforce not configured — no field map resolved.
-[*] Next: quorom import
+[*] Next: quorum import
 ```
 
 The `[i]` is the third block telling you it had nothing to resolve against. The
-account and the profile are written and `quorom import` will run. What you do
+account and the profile are written and `quorum import` will run. What you do
 not have is a field map, and section 7 is the reason to care: configure
 Salesforce later and the weekly run will stop until you have run
-`quorom resolve-fields`.
+`quorum resolve-fields`.
 
 **Re-running it** with the same arguments writes nothing. With a *different*
 profile it refuses: the profile decides which companies appear on the map, so
@@ -829,7 +834,7 @@ needs no `--replace` — same profile arguments, one more domain.
 ## 11. Step 8 — Import your history
 
 ```bash
-quorom import
+quorum import
 ```
 
 With no arguments this imports the last `RECENT_DAYS` days. It prints how many
@@ -839,7 +844,7 @@ a longer backfill from.
 For real history, extend the range:
 
 ```bash
-quorom import --from 2025-10-01 --to 2026-08-24
+quorum import --from 2025-10-01 --to 2026-08-24
 ```
 
 Import at least `RECENT_DAYS` of history before your first weekly run. That
@@ -855,13 +860,13 @@ an overnight run *will* overlap, and that is fine.
 ## 12. Step 9 — The first weekly run
 
 ```bash
-quorom weekly
+quorum weekly
 ```
 
 Or for a specific week:
 
 ```bash
-WEEK_START=2026-08-17 quorom weekly
+WEEK_START=2026-08-17 quorum weekly
 ```
 
 It writes into `OUTPUT_DIR` and nowhere else — no writes back to Gong,
@@ -896,12 +901,12 @@ so a future change to its shape is something you can detect:
 
 ```json
 {
-  "html": "/srv/quorom/output/weekly_view_2026-08-17.html",
-  "json": "/srv/quorom/output/stakeholder_inputs_2026-08-17.json",
+  "html": "/srv/quorum/output/weekly_view_2026-08-17.html",
+  "json": "/srv/quorum/output/stakeholder_inputs_2026-08-17.json",
   "schema": 1,
-  "summary": "/srv/quorom/output/summary_2026-08-17.json",
+  "summary": "/srv/quorum/output/summary_2026-08-17.json",
   "week_start": "2026-08-17",
-  "xlsx": "/srv/quorom/output/weekly_stakeholder_map_2026-08-17.xlsx"
+  "xlsx": "/srv/quorum/output/weekly_stakeholder_map_2026-08-17.xlsx"
 }
 ```
 
@@ -964,8 +969,8 @@ Two jobs:
 
 | Job | Command | When |
 |---|---|---|
-| Overnight import | `quorom import --yesterday` | Daily, after your calls have finished syncing to Gong |
-| Weekly run | `quorom weekly` | **After the target week's meetings have happened** — Friday evening or Saturday, not Monday morning. Read the next paragraph before choosing. |
+| Overnight import | `quorum import --yesterday` | Daily, after your calls have finished syncing to Gong |
+| Weekly run | `quorum weekly` | **After the target week's meetings have happened** — Friday evening or Saturday, not Monday morning. Read the next paragraph before choosing. |
 
 ### The week it reports on is the week you are in
 
@@ -985,7 +990,7 @@ to pick up the week just gone. There is no "last week" default to fall back on �
 by Monday the default has already rolled forward, so you report a week that has
 barely started rather than the one you meant.
 
-`quorom weekly` warns when the window it is about to use has not closed, naming
+`quorum weekly` warns when the window it is about to use has not closed, naming
 how much of it has elapsed. That is a warning and not a refusal, because running
 mid-week deliberately is a reasonable thing to want. On a schedule, treat it as
 the schedule being wrong.
@@ -1017,7 +1022,7 @@ stops happening — no file, no error, no exit code, and nobody watching a
 schedule they assume is working. So the check has to be something that goes
 stale on its own.
 
-`quorom weekly` writes `last_run.json` last, after everything else. Its presence
+`quorum weekly` writes `last_run.json` last, after everything else. Its presence
 means the run finished. So the check is: **is there a manifest for the week I
 expected?** One check, no new code, and it catches the job never starting.
 
@@ -1115,7 +1120,7 @@ Worth finding out before you choose, because it is not a question of effort.
 Two smaller differences. These are binary files, so a repository stores each
 week's copy whole and never compacts it — a few megabytes a year, which only
 grows. And a table can be asked "which weeks do we have" in one line of SQL,
-where a repository needs a checkout. Nothing in Quorom reads `run_outputs`
+where a repository needs a checkout. Nothing in Quorum reads `run_outputs`
 back; that SQL is yours to write.
 
 Three steps.
@@ -1147,7 +1152,7 @@ reaching for when they reach for version control.
 **Then set `RETAIN_RUNS=true`** in your `.env` or your environment's secret
 store (section 9). It defaults off — a deployment that has not made this
 choice must not silently start storing contact data. Once it is on,
-`quorom weekly` writes all three files into `run_outputs` in a single
+`quorum weekly` writes all three files into `run_outputs` in a single
 transaction as its last step, so a partial failure leaves no rows rather than
 one file and the appearance of a stored run; it logs one line either way, so a
 run's log always says which case you were in — what it stored, or that
@@ -1196,19 +1201,19 @@ PostgreSQL. Find out what the answer is for your setup before relying on it.
 
 | What you see | What it is |
 |---|---|
-| `[!] Missing environment: DATABASE_URL, ACCOUNT_DOMAIN` | **Check first: are they set in a `.env`, and did you install with `pip install -e .` rather than `pip install -e '.[dev]'`?** Without the extra, `python-dotenv` is absent and the whole file is ignored, so correctly-set values are reported missing. `quorom` now warns about this on stderr when a `.env` is present. Otherwise: those two are required before anything runs, and an exported shell variable beats the file. |
+| `[!] Missing environment: DATABASE_URL, ACCOUNT_DOMAIN` | **Check first: are they set in a `.env`, and did you install with `pip install -e .` rather than `pip install -e '.[dev]'`?** Without the extra, `python-dotenv` is absent and the whole file is ignored, so correctly-set values are reported missing. `quorum` now warns about this on stderr when a `.env` is present. Otherwise: those two are required before anything runs, and an exported shell variable beats the file. |
 | `[!] The schema is not there. Apply the migrations first` | Section 8. |
-| `bad interpreter: no such file or directory` from `quorom` or `pytest` | A virtualenv hardcodes its own absolute path, so renaming or moving the directory breaks every console script in `.venv/bin`. Delete `.venv` and rebuild it where the directory now lives. |
+| `bad interpreter: no such file or directory` from `quorum` or `pytest` | A virtualenv hardcodes its own absolute path, so renaming or moving the directory breaks every console script in `.venv/bin`. Delete `.venv` and rebuild it where the directory now lives. |
 | `ERROR: File "setup.py" or "setup.cfg" not found. Directory cannot be installed in editable mode` (with `(A "pyproject.toml" file was found, but editable mode currently requires a setuptools-based build.)`) | Your `pip` is too old for an editable install, which almost always means the venv was built by a too-old Python. Nothing is missing from the repository — there is deliberately no `setup.py`. `python -m pip --version` and `python -V` inside the venv; if Python is below 3.11, rebuild the venv with an explicit `python3.12 -m venv .venv`. Section 8. |
-| `[!] No account named '<x>'. Run 'quorom init' first.` | `ACCOUNT_DOMAIN` does not match any account row — either you skipped `init`, or the value changed since. |
+| `[!] No account named '<x>'. Run 'quorum init' first.` | `ACCOUNT_DOMAIN` does not match any account row — either you skipped `init`, or the value changed since. |
 | `accounts.internal_domains is empty` | `init` did not run, or ran without `--internal-domains`. Every attendee would be classified external. |
 | A run stops before doing anything, complaining about the focus profile | There is no active profile. This is a hard error on purpose: an absent profile makes the ICP test pass everything, and the output would look entirely normal and be wrong. |
-| A run stops complaining about the field map | Salesforce is configured but no map is stored. `quorom resolve-fields`. |
+| A run stops complaining about the field map | Salesforce is configured but no map is stored. `quorum resolve-fields`. |
 | A run stops complaining that `run_outputs` does not exist | `RETAIN_RUNS` is on but migration `0005_run_outputs.sql` has not been applied. Apply it and grant the pipeline's role `INSERT` and `SELECT` on it — section 14. |
 | `[!] Gong credentials not configured` | `GONG_ACCESS_KEY` / `GONG_ACCESS_KEY_SECRET`. |
 | A wall of `401`s partway through a run | An expired pasted Salesforce token. It means "connected, token expired", not a network problem. Section 7 — and check whether an exported shell variable is winning over your `.env`. |
-| A column reads `not available in this CRM` | The field map resolved nothing for it. Expected, not a failure. `quorom resolve-fields` after your admin adds a field. |
-| The employee-count or LinkedIn field looks like it picked the wrong one | Re-read the field-map block from `init`, or run `quorom resolve-fields`, which prints every candidate with its populated percentage and every rejection with the rule that rejected it. Counting tells you which field has data, not which field means what you want. |
+| A column reads `not available in this CRM` | The field map resolved nothing for it. Expected, not a failure. `quorum resolve-fields` after your admin adds a field. |
+| The employee-count or LinkedIn field looks like it picked the wrong one | Re-read the field-map block from `init`, or run `quorum resolve-fields`, which prints every candidate with its populated percentage and every rejection with the rule that rejected it. Counting tells you which field has data, not which field means what you want. |
 
 **Never print a credential** — and never paste one into a conversation with an
 agent. The full rule is in section 4, which is where you should already have
@@ -1241,7 +1246,7 @@ usually a pin, not a defect.
 A new migration is numbered above the highest one you have applied; apply the
 ones you have not, in filename order.
 
-Re-run `quorom resolve-fields` when your Salesforce admin adds a field, installs
+Re-run `quorum resolve-fields` when your Salesforce admin adds a field, installs
 or removes a package, or when a column in the artifact stops looking right. The
 superseded version is kept, inactive, so what last week's output read stays
 answerable.

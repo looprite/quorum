@@ -3,7 +3,7 @@ queue — when an enrichment provider is configured.
 
 Nothing is written back to any system. The workbook and the JSON dump are the
 only outputs, and the dump redacts MobilePhone to a boolean: sensitive contact
-fields pass through to the CRM, never into a Quorom store.
+fields pass through to the CRM, never into a Quorum store.
 """
 
 from __future__ import annotations

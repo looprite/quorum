@@ -1,4 +1,4 @@
--- Quorom v1 — 0002_identity: people, person_identifiers, person_attendees
+-- Quorum v1 — 0002_identity: people, person_identifiers, person_attendees
 --
 -- ⚠ These three tables are WRITTEN by the importer and READ BY NOTHING in the
 -- stakeholder-map artifact today. That is a deliberate, named exception to the
@@ -19,7 +19,7 @@
 -- person_identifiers is the read path that retires this exception, and until
 -- that happens these tables are carried, not consumed.
 --
--- The write surface is quorom/gong/identity.py — the only code that touches
+-- The write surface is quorum/gong/identity.py — the only code that touches
 -- all three tables.
 
 create table people (

@@ -8,7 +8,7 @@ CRM legs themselves are verified by hand against the live systems.
 The absence is enforced rather than assumed — see `no_developer_credentials`
 below.
 
-Set QUOROM_TEST_DSN to a Postgres a test may create databases on. Without it the
+Set QUORUM_TEST_DSN to a Postgres a test may create databases on. Without it the
 database tests skip rather than fail.
 """
 
@@ -22,7 +22,7 @@ from types import SimpleNamespace
 import psycopg
 import pytest
 
-from quorom.config import SalesforceConfig
+from quorum.config import SalesforceConfig
 
 MIGRATIONS = sorted(
     (pathlib.Path(__file__).resolve().parents[1] / "migrations").glob("0*.sql")
@@ -60,14 +60,14 @@ def crm_config(configured: bool = True):
 def no_developer_credentials(monkeypatch):
     """Keep whoever is running the tests out of the results.
 
-    `quorom.config` calls `load_dotenv()` at import, so a populated `.env` at the
+    `quorum.config` calls `load_dotenv()` at import, so a populated `.env` at the
     repo root configures the CRM legs these tests need unconfigured. The weekly
     run then reports `NO` where it should report `not checked` — the exact
     conflation this suite exists to catch, and it fails on a developer machine
     while passing in a clean checkout.
 
     Deleting is safe because `load_dotenv()` runs once at import, before any
-    fixture, so nothing repopulates these. QUOROM_TEST_DSN is deliberately left
+    fixture, so nothing repopulates these. QUORUM_TEST_DSN is deliberately left
     alone — it is how the database tests are switched on.
     """
     for name in CREDENTIAL_VARS:
@@ -75,7 +75,7 @@ def no_developer_credentials(monkeypatch):
     # Enrichment providers, asked for their own variable names rather than
     # listed here — so a provider added later is cleared too, and this file
     # never has to name one. With none set, a weekly run makes no provider call.
-    from quorom import enrich
+    from quorum import enrich
 
     for name in enrich.env_vars():
         monkeypatch.delenv(name, raising=False)
@@ -85,16 +85,16 @@ def no_developer_credentials(monkeypatch):
 
 @pytest.fixture(scope="session")
 def admin_dsn() -> str:
-    dsn = os.environ.get("QUOROM_TEST_DSN")
+    dsn = os.environ.get("QUORUM_TEST_DSN")
     if not dsn:
-        pytest.skip("QUOROM_TEST_DSN not set")
+        pytest.skip("QUORUM_TEST_DSN not set")
     return dsn
 
 
 @pytest.fixture
 def database(admin_dsn: str):
     """A fresh database with the migrations applied, dropped afterwards."""
-    name = f"quorom_test_{uuid.uuid4().hex[:10]}"
+    name = f"quorum_test_{uuid.uuid4().hex[:10]}"
     with psycopg.connect(admin_dsn, autocommit=True) as conn:
         conn.execute(f'create database "{name}"')
 

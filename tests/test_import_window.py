@@ -1,6 +1,6 @@
 """The import range, and what the import reports about the run.
 
-`quorom import` with no arguments had to be told a date range, so the
+`quorum import` with no arguments had to be told a date range, so the
 deployment path asked whoever was deploying for a decision they had no basis
 for. The default is now derived from RECENT_DAYS — the same setting that
 decides whether 'Recent contact?' reads yes or no — so the two cannot drift.
@@ -15,9 +15,9 @@ import datetime as dt
 
 import pytest
 
-from quorom.cli import import_window
-from quorom.config import Config
-from quorom.gong.importer import ImportResult, format_elapsed
+from quorum.cli import import_window
+from quorum.config import Config
+from quorum.gong.importer import ImportResult, format_elapsed
 
 TODAY = dt.date(2026, 8, 25)
 
@@ -45,7 +45,7 @@ def test_the_default_window_covers_every_date_recent_contact_calls_recent():
     """The two windows are the same window. A meeting on the oldest day
     `recent_contact` still counts as recent must be inside the import range,
     or the artifact says 'no' about someone who was met."""
-    from quorom.weekly.stakeholders import recent_contact
+    from quorum.weekly.stakeholders import recent_contact
 
     cfg = _cfg()
     from_date, to_date = import_window(cfg, None, None, today=dt.date.today())
@@ -100,7 +100,7 @@ def test_an_empty_range_is_still_timed(monkeypatch):
     it is the one that reaches no database — hence no connection here."""
     from tests.conftest import FakeGong
 
-    from quorom.gong import importer
+    from quorum.gong import importer
 
     ticks = iter([100.0, 142.0])
     monkeypatch.setattr(importer.time, "monotonic", lambda: next(ticks))
@@ -134,8 +134,8 @@ def test_cli_import_with_no_arguments_uses_the_recent_window(
     which range reaches the importer, not about fetching anything."""
     import psycopg
 
-    from quorom import cli
-    from quorom.gong.importer import ImportResult
+    from quorum import cli
+    from quorum.gong.importer import ImportResult
 
     with psycopg.connect(database, autocommit=True) as conn:
         conn.execute(

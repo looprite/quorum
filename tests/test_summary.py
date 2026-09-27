@@ -10,11 +10,11 @@ from __future__ import annotations
 import datetime as dt
 from types import SimpleNamespace
 
-from quorom.crm.contact import Contact
-from quorom.crm.fieldmap import NOT_CHECKED
-from quorom.weekly import stakeholders as stakeholders_mod
-from quorom.weekly import summary as summary_mod
-from quorom.weekly.stakeholders import ICP_NOT_ASSESSED, NO_SENIOR_CONTACT
+from quorum.crm.contact import Contact
+from quorum.crm.fieldmap import NOT_CHECKED
+from quorum.weekly import stakeholders as stakeholders_mod
+from quorum.weekly import summary as summary_mod
+from quorum.weekly.stakeholders import ICP_NOT_ASSESSED, NO_SENIOR_CONTACT
 
 PROFILE = {"focus_seniority": ["vp", "c-level"]}
 

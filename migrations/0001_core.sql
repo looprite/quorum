@@ -1,18 +1,18 @@
--- Quorom v1 — 0001_core: accounts, meetings, attendees
+-- Quorum v1 — 0001_core: accounts, meetings, attendees
 --
 -- Designed backwards from what the pipeline reads. Every column below is either
 -- read by a column of the stakeholder-map artifact or written by the Gong
 -- importer that produces it; nothing is here speculatively. When a read path
 -- later needs a column, a later migration adds it.
 --
--- The write surface is quorom/gong/importer.py. The read surface is
--- WEEK_ATTENDEES_SQL and MET_HISTORY_SQL in quorom/db.py — the two queries the
+-- The write surface is quorum/gong/importer.py. The read surface is
+-- WEEK_ATTENDEES_SQL and MET_HISTORY_SQL in quorum/db.py — the two queries the
 -- weekly run makes against these tables.
 --
 -- The design decisions worth knowing about, each with its reason:
 --
 --   * No row-level security, and no dependency on a hosting platform's auth
---     schema. Quorom deploys single-tenant inside your own environment, with
+--     schema. Quorum deploys single-tenant inside your own environment, with
 --     account-scoped keys read from the environment rather than per-user
 --     sessions — so row-level isolation has no user to key off, and policies
 --     written against a managed platform's auth functions would not run on the

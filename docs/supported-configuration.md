@@ -25,12 +25,12 @@ ICP-test work, and again on 2026-09-21 when the enrichment provider was added.
 
 ## Salesforce: no managed package required
 
-The pipeline holds no Salesforce custom field name. At setup, `quorom init`
+The pipeline holds no Salesforce custom field name. At setup, `quorum init`
 describes the `Account` and `Contact` objects, matches every field's name and
 label against include and exclude patterns, discards those whose type rules them
 out, counts how many records have each survivor populated, and stores the
 candidates in population order. Every query is then built from that map.
-`quorom resolve-fields` re-runs it later and keeps the superseded version.
+`quorum resolve-fields` re-runs it later and keeps the superseded version.
 
 Five things are resolved: employee count, HQ country, HQ city, HQ state, and the
 person's LinkedIn URL. Each records which column it feeds and why each rejected
@@ -63,7 +63,7 @@ A company's HQ country is compared as a whole value, not as a substring of a
 joined address, so `US` cannot match inside `Australia`.
 
 **Unknown is refused, not ignored.** A profile naming a region or country this
-module does not recognise is rejected at `quorom init` and again before a run
+module does not recognise is rejected at `quorum init` and again before a run
 starts. Previously it silently applied no geography filter at all and reported
 success.
 
@@ -79,7 +79,7 @@ that needs it.
 ## What swaps cheaply, and what does not
 
 **The meeting source is genuinely swappable.** Everything downstream reads the
-product database, not Gong. `quorom/gong/` is the only Gong-shaped code and all
+product database, not Gong. `quorum/gong/` is the only Gong-shaped code and all
 it does is fill `meetings` and `attendees`. Supporting Fathom, Fireflies, Chorus
 or anything else means writing one importer that fills those two tables.
 
@@ -111,7 +111,7 @@ relationship.
 
 **Import at least `RECENT_DAYS` of history.** That setting decides whether the
 contact column says yes or no, so importing less produces rows saying "no" for
-people who were met. `quorom import` with no arguments does exactly that window.
+people who were met. `quorum import` with no arguments does exactly that window.
 
 **Nobody is checked for still being at the company** unless an enrichment
 provider is configured. CRM contacts go stale as people move, and this list

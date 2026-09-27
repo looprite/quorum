@@ -3,7 +3,7 @@
 Writes `meetings` and `attendees`, and resolves people through identity.py.
 This is the only part of the system that writes; everything else reads.
 
-Deliberately absent: any handling of transcripts. Quorom stores meeting
+Deliberately absent: any handling of transcripts. Quorum stores meeting
 metadata and attendees only, so there is nothing here that fetches, flattens
 or stores transcript text, and `meetings` has no column to put it in.
 

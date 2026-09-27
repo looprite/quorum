@@ -19,7 +19,7 @@ matching rule to design, not a list to extend.
 
 **Unknown is refused, not ignored.** A profile naming a region this module does
 not know used to apply no geography filter at all and say nothing, so every
-company passed. Configuration is validated at `quorom init` and again before a
+company passed. Configuration is validated at `quorum init` and again before a
 run starts. CRM *data* is never refused: a country an org holds that appears in
 no region is simply outside the selection, which is an answer, not an error.
 """
@@ -167,7 +167,7 @@ def parse_selections(raw: Iterable[Any]) -> list[dict]:
                 raise GeographyError(
                     f"Unknown country {value!r}. It has to be a country one of the "
                     f"regions lists ({', '.join(sorted(REGIONS))}) — see "
-                    "quorom/geography.py. A country nobody can name is a filter "
+                    "quorum/geography.py. A country nobody can name is a filter "
                     "that silently matches nothing."
                 )
             out.append({"level": "country", "value": COUNTRY_INDEX[name]})

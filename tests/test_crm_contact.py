@@ -16,12 +16,12 @@ from types import SimpleNamespace
 
 import pytest
 
-from quorom.config import HubSpotConfig
+from quorum.config import HubSpotConfig
 from tests.conftest import crm_config as _crm_cfg
-from quorom.crm.contact import Contact
-from quorom.crm.fieldmap import NOT_AVAILABLE, FieldMap
-from quorom.crm.hubspot import HubSpot
-from quorom.crm.salesforce import Salesforce
+from quorum.crm.contact import Contact
+from quorum.crm.fieldmap import NOT_AVAILABLE, FieldMap
+from quorum.crm.hubspot import HubSpot
+from quorum.crm.salesforce import Salesforce
 
 SF_RECORD = {
     "attributes": {"type": "Contact"},
@@ -163,7 +163,7 @@ class _Stub:
 
 
 def test_salesforce_still_wins_on_title():
-    from quorom.weekly.people import reconcile
+    from quorum.weekly.people import reconcile
 
     got = reconcile(
         {"email": "a@b.com", "attendee_name": "A", "flag": ""},
@@ -181,7 +181,7 @@ def test_a_name_the_crm_holds_is_not_reported_missing():
     so reporting "needs name" beside it was the run calling something missing
     that it had in hand — and the same person appeared blank on tab 1 while
     correctly named on tab 3."""
-    from quorom.weekly.people import reconcile
+    from quorum.weekly.people import reconcile
 
     got = reconcile(
         {"email": "m@acme.com", "attendee_name": "", "flag": "needs enrichment"},
@@ -213,7 +213,7 @@ def test_needs_title_is_about_a_record_that_exists():
     """A missing title is a finding about a CRM record. Someone with no record
     is not in the CRM at all — the in-CRM column says so — and flagging
     "needs title" beside that reported a gap in a record that does not exist."""
-    from quorom.weekly.people import reconcile
+    from quorum.weekly.people import reconcile
 
     person = {"email": "a@b.com", "attendee_name": "A", "flag": ""}
     no_record = reconcile(person, _Stub(None), _Stub(None, configured=False))
@@ -229,7 +229,7 @@ def test_needs_title_is_about_a_record_that_exists():
     [(True, False, True), (False, True, True), (False, False, False)],
 )
 def test_a_mobile_in_either_crm_counts(sf_mobile, hs_mobile, expected):
-    from quorom.weekly.people import reconcile
+    from quorum.weekly.people import reconcile
 
     got = reconcile(
         {"email": "a@b.com", "attendee_name": "A", "flag": ""},
@@ -241,7 +241,7 @@ def test_a_mobile_in_either_crm_counts(sf_mobile, hs_mobile, expected):
 
 
 def test_the_stakeholder_row_is_built_from_the_contact(tmp_path):
-    from quorom.weekly.stakeholders import build
+    from quorum.weekly.stakeholders import build
 
     class _Bench:
         configured = True
@@ -317,7 +317,7 @@ def test_weekly_reads_no_crm_field_name():
     only that CRM uses, which is what would break the moment a second one is
     added.
     """
-    weekly = pathlib.Path(__file__).resolve().parents[1] / "quorom" / "weekly"
+    weekly = pathlib.Path(__file__).resolve().parents[1] / "quorum" / "weekly"
     offenders = []
     for path in sorted(weekly.glob("*.py")):
         for n, line in enumerate(path.read_text().splitlines(), 1):

@@ -17,9 +17,9 @@ from types import SimpleNamespace
 import psycopg
 import pytest
 
-from quorom import bootstrap, db
-from quorom.config import SalesforceConfig
-from quorom.crm.fieldmap import (
+from quorum import bootstrap, db
+from quorum.config import SalesforceConfig
+from quorum.crm.fieldmap import (
     NOT_AVAILABLE,
     SPECS,
     FieldMap,
@@ -28,9 +28,9 @@ from quorom.crm.fieldmap import (
     describe_lines,
     resolve,
 )
-from quorom.crm.contact import Contact
-from quorom.crm.salesforce import Salesforce
-from quorom.weekly.run import MissingFieldMap, run_weekly
+from quorum.crm.contact import Contact
+from quorum.crm.salesforce import Salesforce
+from quorum.weekly.run import MissingFieldMap, run_weekly
 
 from tests.conftest import crm_config as _crm_cfg
 from tests.test_import_and_weekly import ACCOUNT, _cfg, _import
@@ -307,7 +307,7 @@ def test_the_salesforce_module_names_no_custom_field():
     convention: a custom API name in this file is a run that dies at the next
     customer, because a field that does not exist raises INVALID_FIELD and
     kills the whole query rather than blanking a column."""
-    import quorom.crm.salesforce as sf_mod
+    import quorum.crm.salesforce as sf_mod
 
     source = open(sf_mod.__file__).read()
 
@@ -353,13 +353,13 @@ def _sf(available: bool, configured: bool = True):
     ],
 )
 def test_linkedin_presence_has_three_answers(available, contact, expected):
-    from quorom.weekly.people import _linkedin_presence
+    from quorum.weekly.people import _linkedin_presence
 
     assert _linkedin_presence(_sf(available), contact) is expected
 
 
 def test_an_unresolved_linkedin_field_says_so_in_the_cell():
-    from quorom.weekly.workbook import _linkedin_cell
+    from quorum.weekly.workbook import _linkedin_cell
 
     assert _linkedin_cell(None) == NOT_AVAILABLE
     assert _linkedin_cell(True) == "yes"

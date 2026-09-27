@@ -70,7 +70,7 @@ web_modules/
 .env.*
 !.env.example
 
-# Quorom v1 — local data & generated artifacts (may contain PII; never commit)
+# Quorum v1 — local data & generated artifacts (may contain PII; never commit)
 /data/
 output/
 **/output/
@@ -159,7 +159,7 @@ venv/
 .pytest_cache/
 *.egg-info/
 
-# Quorom
+# Quorum
 # The weekly run writes the workbook, the JSON dump and the HTML view here.
 # They contain real contact data and must never be committed.
 output/

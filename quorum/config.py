@@ -129,7 +129,7 @@ class Config:
     # one is not a relationship. Stated on the row, not judged in code.
     group_call_min: int = field(default_factory=lambda: _int("GROUP_CALL_MIN", 8))
     # How far back still counts as recent contact — and, with no dates given,
-    # how far back `quorom import` reaches. One number, deliberately: importing
+    # how far back `quorum import` reaches. One number, deliberately: importing
     # less than the recency window answers 'Recent contact?' with 'no' for
     # people who were met inside it.
     recent_days: int = field(default_factory=lambda: _int("RECENT_DAYS", 90))
@@ -148,7 +148,7 @@ class Config:
     output_dir: str = field(default_factory=lambda: os.environ.get("OUTPUT_DIR", "output"))
 
     # Off by default — a deployment that has not chosen retention must not
-    # silently start storing contact data. On, quorom/weekly/run.py stores the
+    # silently start storing contact data. On, quorum/weekly/run.py stores the
     # week's three emitted files into run_outputs (migrations/0005, applied
     # separately — see docs/setup.md §14). Read by nothing else in the
     # pipeline.

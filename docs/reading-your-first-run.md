@@ -107,7 +107,7 @@ see what was removed.
 
 ## What to do with each kind of gap
 
-**Nothing in this list happens automatically.** Quorom reads your CRM and
+**Nothing in this list happens automatically.** Quorum reads your CRM and
 writes nothing back to it — not to Salesforce, not to HubSpot, not to Gong. The
 output is a list of things for a person to decide about, and every action below
 happens in your own systems.

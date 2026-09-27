@@ -1,6 +1,6 @@
 """Salesforce — read-only, at read time, no sync.
 
-Quorom holds no CRM data and no CRM tables. Contacts are fetched when a run
+Quorum holds no CRM data and no CRM tables. Contacts are fetched when a run
 needs them and compared in context, which is what keeps the comparison current
 and the schema small.
 

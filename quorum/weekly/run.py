@@ -32,7 +32,7 @@ class MissingFocusProfile(RuntimeError):
     output: `meets_profile` treats an absent profile as "everything fits", so
     the run completes, the workbook has the usual shape, and every company met
     that week is reported as an ICP target. A reader cannot tell that from a
-    correct run. `quorom init` creates one.
+    correct run. `quorum init` creates one.
     """
 
 
@@ -42,7 +42,7 @@ class MissingFieldMap(RuntimeError):
     Fatal for the same reason: the map is where the non-standard field names
     come from, so a run without one reads standard fields only — no headcount
     from a package field, no HQ, no LinkedIn — and the ICP test then judges
-    every company on data it did not fetch. `quorom resolve-fields` writes one.
+    every company on data it did not fetch. `quorum resolve-fields` writes one.
     """
 
 
@@ -118,7 +118,7 @@ def run_weekly(cfg: Config, log=print) -> dict:
                 "the ICP test (employee band, HQ geography) and the seniority bar, "
                 "and without one every company met would be reported as an ICP "
                 "target — an artifact that looks normal and is wrong. "
-                "Create one with `quorom init`."
+                "Create one with `quorum init`."
             )
         # Validated here, before any work, rather than per company inside the
         # ICP test: a geography the test cannot act on is a broken profile, and
@@ -139,7 +139,7 @@ def run_weekly(cfg: Config, log=print) -> dict:
                 "resolved CRM field map. Every query would fall back to standard "
                 "fields only — no headcount, HQ or LinkedIn from this org's own "
                 "fields — and the ICP test would judge companies on data that was "
-                "never fetched. Resolve one with `quorom resolve-fields`."
+                "never fetched. Resolve one with `quorum resolve-fields`."
             )
         sf.fields = FieldMap(field_map)
         for line in fieldmap_mod.describe_lines(field_map):

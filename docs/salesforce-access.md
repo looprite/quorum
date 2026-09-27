@@ -46,7 +46,7 @@ Salesforce admin in your own org. It yields `SF_TOKEN_URL`, `SF_CLIENT_ID` and
 
 The bench query selects the minimum that produces the artifact — every field is
 read by a column or by the ranking. Its standard half lives in
-`quorom/crm/salesforce.py` (`BENCH_STANDARD`, `CONTACT_STANDARD`); everything
+`quorum/crm/salesforce.py` (`BENCH_STANDARD`, `CONTACT_STANDARD`); everything
 else comes from the deployment's resolved field map, so the query runs against
 any Salesforce org whether or not a managed data package is installed. Described
 in `docs/pipeline.md`, step 0b.

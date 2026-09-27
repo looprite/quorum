@@ -1,14 +1,14 @@
--- Quorom v1 — 0005_run_outputs: the three files a weekly run emits, kept as
+-- Quorum v1 — 0005_run_outputs: the three files a weekly run emits, kept as
 -- rows, for a deployment that has opted into database retention.
 --
 -- A weekly run cannot be reproduced: company coverage, the ICP verdicts and
 -- the stakeholder list are computed against Salesforce and HubSpot as they
 -- stood that week, and none of it is written back to the database
--- (quorom/weekly/run.py). A run that is not kept is gone. This table is
--- where it is kept, when RETAIN_RUNS is on (quorom/config.py). See
+-- (quorum/weekly/run.py). A run that is not kept is gone. This table is
+-- where it is kept, when RETAIN_RUNS is on (quorum/config.py). See
 -- docs/setup.md §14.
 --
--- Written by quorom/weekly/retention.py, in one transaction per run — a
+-- Written by quorum/weekly/retention.py, in one transaction per run — a
 -- partial failure must leave no rows, not one file and the appearance of a
 -- stored run.
 --

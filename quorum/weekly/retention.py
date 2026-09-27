@@ -2,9 +2,9 @@
 
 docs/setup.md §14. Nothing in the pipeline reads run_outputs back — this is
 the write path only, and it runs only when the deployment has opted in
-(quorom/config.py).
+(quorum/config.py).
 
-run_weekly's own `with db.connect(...)` block (quorom/weekly/run.py) closes
+run_weekly's own `with db.connect(...)` block (quorum/weekly/run.py) closes
 before the files are written, so this opens a connection of its own.
 """
 

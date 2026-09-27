@@ -4,7 +4,7 @@ Section 14 of `setup.md` asks you to decide who receives each run — it
 deliberately doesn't say how, because that's a real per-deployment choice. This
 is one way to answer it: posting the `.xlsx` and `.html` to a Slack channel.
 
-**Quorom has no delivery mechanism built in.** Everything below is code you add
+**Quorum has no delivery mechanism built in.** Everything below is code you add
 in your own deployment, not something the tool does for you. That is the
 boundary from §1: upstream is code you read and never edit; this is a worked
 example of something you write on your side.
@@ -48,13 +48,13 @@ shape.
 
 ## Adding the dependency
 
-`slack_sdk` isn't one of Quorom's own dependencies — it's something your
+`slack_sdk` isn't one of Quorum's own dependencies — it's something your
 deployment needs for this delivery step specifically. How you declare it
-depends on how your deployment installs Quorom in the first place: if you
+depends on how your deployment installs Quorum in the first place: if you
 already have a `requirements.txt` or `pyproject.toml` for deployment-owned
 code, add it there; if your only install step is `pip install -e .` against
 this repo, add a small separate dependency file for your own scripts and
-install it as an extra step, so it stays clearly distinguished from Quorom's
+install it as an extra step, so it stays clearly distinguished from Quorum's
 own pinned dependencies rather than merged into them.
 
 **If you build your own image, the dependency file and the script are two
@@ -66,7 +66,7 @@ found" — after the weekly run has already done all its work.
 
 ## Finding the files: read the manifest
 
-`quorom weekly` writes `last_run.json` into `OUTPUT_DIR` as its final step —
+`quorum weekly` writes `last_run.json` into `OUTPUT_DIR` as its final step —
 the output paths and the week they belong to (§12). **Read that.** The
 two alternatives both look reasonable and are both traps: rebuilding the
 filename pattern yourself couples your script to names upstream can change, and
@@ -89,7 +89,7 @@ Reads OUTPUT_DIR/last_run.json to find the run's files.
 Env vars required:
     SLACK_BOT_TOKEN   - bot token, xoxb-..., scopes: chat:write, files:write
     SLACK_CHANNEL_ID  - target channel ID (not the #name)
-    OUTPUT_DIR        - the same directory quorom weekly writes to
+    OUTPUT_DIR        - the same directory quorum weekly writes to
 """
 import json
 import os
@@ -107,7 +107,7 @@ def load_manifest(output_dir: Path) -> dict:
     if not path.exists():
         # No manifest means no completed run to deliver. Posting the previous
         # week's files silently would be worse than failing here.
-        sys.exit(f"[!] No manifest at {path} — did quorom weekly finish?")
+        sys.exit(f"[!] No manifest at {path} — did quorum weekly finish?")
 
     manifest = json.loads(path.read_text())
     if manifest.get("schema") != SUPPORTED_MANIFEST_SCHEMA:
@@ -150,7 +150,7 @@ def deliver(manifest: dict) -> None:
         WebClient(token=token).files_upload_v2(
             channel=channel,
             initial_comment="\n".join(
-                [f"Quorom weekly run — week of {week}"] + summary_lines(manifest)
+                [f"Quorum weekly run — week of {week}"] + summary_lines(manifest)
             ),
             file_uploads=uploads,
         )
@@ -187,6 +187,6 @@ later. Decide retention separately, as §14 describes.
   error mentions `channel_not_found` and you passed `#something`, that's the
   name-vs-ID mixup, not a permissions problem.
 - **A delivery step that exits non-zero still needs somewhere to be seen.**
-  If it runs as a separate step after `quorom weekly`, your runner now has two
+  If it runs as a separate step after `quorum weekly`, your runner now has two
   places a failure can happen. See `paas-deployment.md` on platform alerting
   covering service health rather than a run's exit code.
