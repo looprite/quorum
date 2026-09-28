@@ -358,6 +358,40 @@ def test_the_summary_counts_what_the_provider_found_and_the_queue(tmp_path):
     )
     html = open(view_mod.render(xlsx, "example.com")).read()
     assert "Not in your CRM, and found by Example" in html
+    assert "Enrichment: Example — its findings are on the Review queue tab." in html
+
+
+def test_with_no_provider_the_summary_says_so_in_words(tmp_path):
+    """No column and no count is the rule for a source that was not asked. The
+    Summary tab still says it in a sentence, because otherwise a run that was
+    meant to be enriched and was not looks identical to one that never was."""
+    from quorum.weekly import summary as summary_mod
+
+    cfg, sf, hs = _cfg(), _SF(), _HS()
+    people = _attendees()
+    reconciled = [people_mod.reconcile(p, sf, hs) for p in people]
+    coverage = coverage_mod.build_coverage(
+        cfg, people_mod.group_companies(people), PROFILE, sf, hs
+    )
+    rows, raw = stakeholders_mod.build(
+        cfg, coverage, coverage_mod.seniority_terms(PROFILE), {}, sf
+    )
+    stats = summary_mod.build(cfg, reconciled, coverage, rows, raw, PROFILE)
+
+    assert not any(s["area"] == "Review queue" for s in stats)
+    assert "people_not_in_crm_found" not in {s["key"] for s in stats}
+
+    xlsx = str(tmp_path / "weekly_stakeholder_map_2026-08-17.xlsx")
+    workbook_mod.build_workbook(
+        cfg, reconciled, coverage, [], rows, xlsx, profile=PROFILE,
+        geo_label="North America", summary=stats,
+    )
+    html = open(view_mod.render(xlsx, "example.com")).read()
+    assert (
+        "Enrichment: not configured — no provider lookups and no review queue this run."
+        in html
+    )
+    assert "<h2>Review queue" not in html
 
 
 def test_each_person_and_company_is_looked_up_once_and_inboxes_never(tmp_path):
@@ -497,6 +531,12 @@ def test_the_weekly_run_checks_the_provider_first_and_adds_the_review_queue(
     dump = json.loads(open(paths["json"]).read())
     assert dump["enrichment_provider"] == "Example"
     assert isinstance(dump["review_queue"], list)
+
+    # The delivery step's copy names the provider too, and the window the
+    # recent-contact count used.
+    summary = json.loads(open(paths["summary"]).read())
+    assert summary["enrichment_provider"] == "Example"
+    assert summary["recent_days"] == 90
 
 
 def test_a_provider_without_a_linkedin_lookup_is_not_asked(tmp_path):

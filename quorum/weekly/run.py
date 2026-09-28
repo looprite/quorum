@@ -322,7 +322,11 @@ def run_weekly(cfg: Config, log=print) -> dict:
     # Its own small file, named by the manifest, so a delivery step can post
     # the counts without opening the workbook or parsing the log.
     summary_path = os.path.join(cfg.output_dir, f"summary_{week}.json")
-    summary_mod.write(summary_path, week, summary)
+    summary_mod.write(
+        summary_path, week, summary,
+        enrichment=provider.display_name if provider else None,
+        recent_days=cfg.recent_days,
+    )
     log(f"[✓] Wrote {summary_path}")
 
     html_path = view_mod.render(xlsx_path, cfg.account)

@@ -195,11 +195,14 @@ that; the queue says where to look.
 **The Summary tab** gains two things: how many of the people not in your CRM
 the provider found, out of those it looked up (shared inboxes are not), and
 one row per review-queue kind with its count — zeros included, so a kind
-dropping to zero week on week is visible.
+dropping to zero week on week is visible. Its footnote names the provider;
+with none configured, it says that instead, which is the one place a run that
+was meant to be enriched and was not can be told from one that never was.
 
 The JSON dump carries the same: each company and stakeholder row holds the
 provider's values, `enrichment_provider` names the provider (null when none was
-asked), and `review_queue` is the tab as data.
+asked), and `review_queue` is the tab as data. `summary_<week>.json` carries
+`enrichment_provider` too, for a delivery step.
 
 ---
 

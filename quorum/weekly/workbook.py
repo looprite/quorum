@@ -134,6 +134,18 @@ def build_workbook(
         for st in summary:
             ws_summary.append([st["area"], st["what"], st["count"], st["out_of"]])
         ws_summary.append([])
+        # Said in words either way. An absent provider contributes no column
+        # and no count, which is right — but it also means a run that was meant
+        # to be enriched and was not looks exactly like one that never was.
+        # This line is the only place the difference shows.
+        ws_summary.append(
+            [
+                f"Enrichment: {other} — its findings are on the Review queue tab."
+                if other
+                else "Enrichment: not configured — no provider lookups and no "
+                "review queue this run."
+            ]
+        )
         ws_summary.append(
             [
                 "Each count is a count of rows on the tab named, so any of them can be "

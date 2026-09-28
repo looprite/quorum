@@ -411,7 +411,10 @@ CRM records among people met, and people on the stakeholder list, lacking a
 title, LinkedIn or mobile; and review-queue rows by kind, zeros included. A
 count whose source was not configured is absent, not zero. The one count not
 read off a tab is recent senior contact: it asks of the whole CRM bench, not
-the capped list, so it does not move with `SHORTLIST_SIZE`.
+the capped list, so it does not move with `SHORTLIST_SIZE`. Under the counts,
+one line says which enrichment provider ran, or that none was configured; the
+summary file carries the same as `enrichment_provider`, with `recent_days`
+beside it.
 
 **Read path served:** the artifact itself; the summary is what a reader sees
 first and what a delivery step posts; and the JSON is what lets the ranking be

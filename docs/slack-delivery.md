@@ -120,16 +120,74 @@ def load_manifest(output_dir: Path) -> dict:
 
 
 def summary_lines(manifest: dict) -> list[str]:
-    """The Summary tab's counts, one line each. A run from a version before the
-    summary existed has no `summary` key — post the files without it."""
+    """One line per tab, zeros and restatements left out — the Summary tab in
+    the attached files has every count. A run from a version before the summary
+    existed has no `summary` key: post the files without it."""
     if "summary" not in manifest:
         return []
-    stats = json.loads(Path(manifest["summary"]).read_text())["stats"]
-    return [
-        f"• {s['what']}: {s['count']}"
-        + (f" of {s['out_of']}" if s["out_of"] is not None else "")
-        for s in stats
+    data = json.loads(Path(manifest["summary"]).read_text())
+    stats = {s["key"]: s for s in data["stats"]}
+    provider = data.get("enrichment_provider")
+
+    def count(key):
+        return stats[key]["count"] if key in stats else None
+
+    def nonzero(key, text):
+        n = count(key)
+        return f"{n} {text}" if n else None
+
+    def line(label, parts):
+        parts = [p for p in parts if p]
+        return f"*{label}:* " + " · ".join(parts) if parts else None
+
+    fit = stats.get("companies_fit")
+    recent = stats.get("companies_fit_recent_senior")
+    days = data.get("recent_days")
+    found = stats.get("people_not_in_crm_found")
+    not_in_crm = count("people_not_in_crm")
+
+    lines = [
+        line("Map", [
+            f"{fit['count']} of {fit['out_of']} companies met fit your profile"
+            if fit else f"{count('companies_met')} companies met",
+            nonzero("companies_not_assessed", "could not be assessed"),
+            (f"{recent['count']} have had a senior contact in the last {days} days"
+             if days else f"{recent['count']} have had a recent senior contact")
+            if recent else None,
+        ]),
+        line("Met this week", [
+            f"{count('people_met')} people",
+            (f"{not_in_crm} not in your CRM"
+             + (f" ({found['count']} found by {provider})" if found and provider else ""))
+            if not_in_crm else None,
+            nonzero("people_in_crm_no_title", "CRM records with no title"),
+        ]),
+        line("Stakeholder list", [
+            nonzero("stakeholders", "people"),
+            nonzero("stakeholders_no_title", "with no title"),
+            nonzero("stakeholders_no_linkedin", "with no LinkedIn"),
+            nonzero("stakeholders_no_mobile", "with no mobile"),
+        ]),
     ]
+
+    queue = [(s["what"], s["count"]) for s in data["stats"] if s["key"].startswith("queue:")]
+    if provider:
+        total = sum(n for _, n in queue)
+        lines.append(
+            f"*Review queue:* {total} rows to check — "
+            + ", ".join(f"{kind} {n}" for kind, n in queue if n)
+            if total else "*Review queue:* nothing to check"
+        )
+    elif "enrichment_provider" in data:
+        # Null, not missing: the run knew no provider was configured. A file
+        # without the key is from an older version, and says nothing either way.
+        lines.append(
+            ":warning: Enrichment not configured this run: "
+            "no provider lookups, no review queue"
+        )
+
+    lines.append("Open the HTML for the full map.")
+    return [l for l in lines if l]
 
 
 def deliver(manifest: dict) -> None:
@@ -171,6 +229,16 @@ a person reads in Slack, and it contains every input the run read. Add it as a
 third upload if your team wants it, bearing in mind it is the most sensitive of
 the files. The summary is posted as text instead: it holds counts only, no
 names.
+
+**The message is a digest, not the Summary tab.** One line per tab, with the
+counts someone would act on; a zero, or a count that restates another, is left
+out, because the Summary tab in the attached files has all of them. A line for
+a source your deployment does not configure is absent — the same rule as the
+tabs. The one line that reports an absence is the enrichment warning, and it
+fires only when `summary_<week>.json` carries `enrichment_provider: null`: the
+run knew no provider was configured. A file without that key comes from an
+older version and says nothing either way, so it gets no warning. If your
+deployment never configures a provider, delete that branch.
 
 ## Delivery is not retention
 

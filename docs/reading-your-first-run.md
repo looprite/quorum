@@ -32,7 +32,10 @@ which legs actually ran.
 missing from it is a source that was not configured — there is no "not in your
 CRM" count without a CRM — which is different from a line reading 0. Every
 count is out of something; read the two together. Each is a count of rows on
-the tab it names, so a number that looks wrong can be checked there.
+the tab it names, so a number that looks wrong can be checked there. Under
+the counts, the tab says in words whether an enrichment provider ran: an
+absent provider adds no columns, so this line is the only place a run that
+should have been enriched, and was not, shows up.
 
 **An absent column, a `—`, and a `no` mean three different things**, and the
 difference is the same one everywhere in this output:

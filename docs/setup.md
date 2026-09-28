@@ -920,10 +920,15 @@ schema 1 keeps working. The other direction is the one to handle: a deployment
 pinned to a version from before the summary has no `summary` key, whatever this
 guide says. A delivery step that uses it should treat it as optional.
 
-`summary_<week>.json` holds `schema`, `week_start` and `stats` — a list in the
-order the Summary tab shows them, each with a stable `key`, the `what` a person
-reads, its `count`, and `out_of` (null where a count has no denominator). A
-count whose source was not configured is absent, not zero. The same list is in
+`summary_<week>.json` holds `schema`, `week_start`, `enrichment_provider`,
+`recent_days` and `stats` — a list in the order the Summary tab shows them,
+each with a stable `key`, the `what` a person reads, its `count`, and `out_of`
+(null where a count has no denominator). A count whose source was not
+configured is absent, not zero. `enrichment_provider` is the exception that
+proves it: it names the provider, and is `null` — present, not missing — when
+none was configured, so a delivery step can say so. A file from a version
+before that key has neither `enrichment_provider` nor `recent_days`; treat both
+as optional. The same list is in
 the inputs dump under `summary`, which is the copy retention keeps.
 
 The tabs, named here exactly as the workbook names them:

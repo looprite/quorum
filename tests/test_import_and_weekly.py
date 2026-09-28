@@ -457,11 +457,18 @@ def test_the_summary_is_a_tab_a_file_and_part_of_the_dump(database, gong_calls, 
     # No CRM in this configuration, so nothing a CRM would have answered.
     assert "people_not_in_crm" not in stats
 
+    # No provider here: the key is present and null, not missing. Missing would
+    # read the same as a file from before the key existed.
+    assert "enrichment_provider" in summary
+    assert summary["enrichment_provider"] is None
+    assert summary["recent_days"] == _cfg(database, tmp_path).recent_days
+
     dump = json.loads(open(paths["json"]).read())
     assert dump["summary"] == summary["stats"]
 
     html = open(paths["html"]).read()
     assert html.index("<h2>Summary") < html.index("<h2>Company coverage")
+    assert "Enrichment: not configured" in html
 
 
 def test_manifest_is_written_only_after_retention_succeeds(

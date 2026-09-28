@@ -173,8 +173,31 @@ def build(
     return stats
 
 
-def write(path: str, week: str, stats: list[dict]) -> None:
+def write(
+    path: str,
+    week: str,
+    stats: list[dict],
+    enrichment: Optional[str] = None,
+    recent_days: Optional[int] = None,
+) -> None:
+    """`enrichment_provider` is written as null, not left out, when no provider
+    was configured. Its absence would read the same as a file from a version
+    that predates the key, and a delivery step needs to tell "not configured"
+    from "not known" — the first is worth a warning, the second is not.
+
+    `recent_days` is the window the recent-contact count was taken over, so a
+    delivery step can say it without restating a default it does not own."""
     os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
     with open(path, "w", encoding="utf-8") as fh:
-        json.dump({"schema": SCHEMA, "week_start": week, "stats": stats}, fh, indent=2)
+        json.dump(
+            {
+                "schema": SCHEMA,
+                "week_start": week,
+                "enrichment_provider": enrichment,
+                "recent_days": recent_days,
+                "stats": stats,
+            },
+            fh,
+            indent=2,
+        )
         fh.write("\n")

@@ -184,3 +184,22 @@ def test_a_company_with_no_senior_contact_has_had_no_recent_one():
     _, raw = stakeholders_mod.build(_cfg(), coverage, [], {}, _SF())
 
     assert raw[0]["any_recent_contact"] is False
+
+
+def test_the_file_says_null_when_no_provider_was_configured(tmp_path):
+    """Null, not missing: a missing key reads the same as a file from before
+    the key existed, and a delivery step needs to tell the two apart."""
+    import json
+
+    path = tmp_path / "summary_2026-08-17.json"
+    summary_mod.write(str(path), "2026-08-17", [], enrichment=None, recent_days=90)
+    data = json.loads(path.read_text())
+    assert "enrichment_provider" in data
+    assert data["enrichment_provider"] is None
+    assert data["recent_days"] == 90
+
+    summary_mod.write(str(path), "2026-08-17", [], enrichment="Example", recent_days=30)
+    data = json.loads(path.read_text())
+    assert data["enrichment_provider"] == "Example"
+    assert data["recent_days"] == 30
+    assert data["schema"] == 1
