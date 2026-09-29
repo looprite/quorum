@@ -58,6 +58,17 @@ credits available:
 [i] Enrichment: LeadIQ — <plan name> (Active), <n> credits available
 ```
 
+**Set it where the scheduled job runs, then check a scheduled run.** The key
+has to be in the environment of whatever runs `quorum weekly` on a schedule —
+on a PaaS, the app's own environment variables — not only in a shell someone
+tried it from. A trial with the key exported by hand proves the key works; it
+says nothing about whether the schedule has it. With no key, the run does not
+fail: it produces a normal-looking artifact with no provider columns. So read
+the first scheduled run for one of three things — the log line above, the
+Summary tab's footnote naming the provider, or `enrichment_provider` in
+`summary_<week>.json`. If it says "not configured", the key is not reaching the
+job.
+
 ---
 
 ## What it looks up

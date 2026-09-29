@@ -1001,8 +1001,9 @@ mid-week deliberately is a reasonable thing to want. On a schedule, treat it as
 the schedule being wrong.
 
 What the runner needs: the repository at a known commit, the Python environment,
-the environment variables from your secret store, outbound network to
-`api.gong.io` and your CRM, and network to your database.
+the environment variables from your secret store — including the enrichment
+provider's key, if you use one — outbound network to `api.gong.io`, your CRM
+and any provider, and network to your database.
 
 Look first at whatever already runs alongside your database — if that platform
 offers scheduled tasks, it is the shortest path and the credentials are already
@@ -1043,6 +1044,12 @@ What counts as healthy depends on which schedule you chose above:
 
 They differ by exactly one week. Check against the wrong row and a working
 deployment reports a failure every time.
+
+**If you configured an enrichment provider, check that too.** A run without its
+key does not fail; it drops the provider's columns and carries on. The
+manifest's `summary` entry points to the file that says which it was:
+`enrichment_provider` in `summary_<week>.json` should name your provider, not
+be `null`.
 
 **If your platform tears the container down after each run** — the second model
 in `docs/paas-deployment.md` — `OUTPUT_DIR` goes with it and there is no
