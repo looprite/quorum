@@ -26,7 +26,7 @@ import re
 import unicodedata
 from typing import Optional
 
-from ..enrich import linkedin_handle
+from ..enrich import Withheld, linkedin_handle
 from .coverage import meets_profile
 from .people import company_mismatch, missing_from_crm
 from .stakeholders import ICP_NOT_ASSESSED, NO_SENIOR_CONTACT
@@ -55,11 +55,26 @@ class _Cached:
         self.linkedin_looked_up = 0
         # Optional in the provider interface; a provider without it is not asked.
         self.can_search_linkedin = hasattr(provider, "person_by_linkedin")
+        # Records the provider declined to return, and its codes for why.
+        self.withheld = 0
+        self.withheld_codes: set[str] = set()
+
+    def _ask(self, lookup, value):
+        """A withheld record is one person the provider will not show: counted,
+        reported as not found, and the run carries on. Anything else the
+        provider raises is not caught here."""
+        try:
+            return lookup(value)
+        except Withheld as w:
+            self.withheld += 1
+            if str(w):
+                self.withheld_codes.add(str(w))
+            return None
 
     def person(self, email: str):
         key = (email or "").strip().lower()
         if key not in self._people:
-            self._people[key] = self.provider.person_by_email(key) if key else None
+            self._people[key] = self._ask(self.provider.person_by_email, key) if key else None
             self.people_looked_up += 1 if key else 0
         return self._people[key]
 
@@ -68,7 +83,7 @@ class _Cached:
         if not handle or not self.can_search_linkedin:
             return None
         if handle not in self._by_linkedin:
-            self._by_linkedin[handle] = self.provider.person_by_linkedin(url)
+            self._by_linkedin[handle] = self._ask(self.provider.person_by_linkedin, url)
             self.linkedin_looked_up += 1
         return self._by_linkedin[handle]
 
@@ -82,6 +97,27 @@ class _Cached:
 
 def start(provider) -> Optional[_Cached]:
     return _Cached(provider) if provider else None
+
+
+class EveryLookupWithheld(RuntimeError):
+    """Every person lookup in the run came back withheld.
+
+    One withheld record is a person the provider will not show. All of them is
+    the provider not answering, and reporting everyone as not found would be a
+    clean-looking run that quietly says nothing.
+    """
+
+
+def check_withheld(pass_: _Cached) -> None:
+    """Raise if more than one person was looked up and every one was withheld.
+    A single lookup that was withheld is not enough to tell the two apart."""
+    asked = pass_.people_looked_up + pass_.linkedin_looked_up
+    if asked > 1 and pass_.withheld == asked:
+        raise EveryLookupWithheld(
+            f"{pass_.provider.display_name} withheld all {asked} person lookups"
+            + (f" (codes: {', '.join(sorted(pass_.withheld_codes))})" if pass_.withheld_codes else "")
+            + " — treating that as the provider not answering, not as nobody found."
+        )
 
 
 def _norm(text: str) -> str:

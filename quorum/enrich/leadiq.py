@@ -28,7 +28,7 @@ from typing import Callable, Optional
 
 import requests
 
-from . import Company, Person, linkedin_handle
+from . import Company, Person, Withheld, linkedin_handle
 
 ENDPOINT = "https://api.leadiq.com/graphql"
 TIMEOUT = 30
@@ -116,7 +116,12 @@ class LeadIQ:
 
     # --- transport -------------------------------------------------------- #
 
-    def _query(self, query: str, variables: Optional[dict] = None) -> dict:
+    def _query(
+        self, query: str, variables: Optional[dict] = None, withhold_under: str = ""
+    ) -> dict:
+        """`withhold_under` names the root field of a person lookup. Errors that
+        all lie under it are the provider declining to return a record, and
+        raise Withheld; anything else raises LeadIQError. See _withheld()."""
         for attempt in range(1, MAX_ATTEMPTS + 1):
             resp = self._post(
                 ENDPOINT,
@@ -131,6 +136,8 @@ class LeadIQ:
                     raise LeadIQError(f"{self.display_name} API returned HTTP {resp.status_code}")
                 body = resp.json()
                 if body.get("errors"):
+                    if withhold_under and _withheld(body["errors"], withhold_under):
+                        raise Withheld(_codes(body["errors"]))
                     messages = "; ".join(e.get("message", "") for e in body["errors"])
                     raise LeadIQError(f"{self.display_name} API error: {messages}")
                 return body.get("data") or {}
@@ -155,7 +162,9 @@ class LeadIQ:
         email = (email or "").strip().lower()
         if not email:
             return None
-        data = self._query(PERSON_QUERY, {"input": {"email": email}})
+        data = self._query(
+            PERSON_QUERY, {"input": {"email": email}}, withhold_under="searchPeople"
+        )
         for record in (data.get("searchPeople") or {}).get("results") or []:
             current = record.get("currentPositions") or []
             past = record.get("pastPositions") or []
@@ -176,7 +185,9 @@ class LeadIQ:
         if not handle:
             return None
         data = self._query(
-            PERSON_QUERY, {"input": {"linkedinUrl": f"https://www.linkedin.com/in/{handle}"}}
+            PERSON_QUERY,
+            {"input": {"linkedinUrl": f"https://www.linkedin.com/in/{handle}"}},
+            withhold_under="searchPeople",
         )
         for record in (data.get("searchPeople") or {}).get("results") or []:
             found = linkedin_handle((record.get("linkedin") or {}).get("linkedinUrl") or "")
@@ -202,6 +213,35 @@ class LeadIQ:
                 country=country.strip(),
             )
         return None
+
+
+def _withheld(errors: list, root: str) -> bool:
+    """True when every error is a field error under `root`.
+
+    Recognised from the GraphQL specification, not from LeadIQ's wording, which
+    it does not document. A request error — a malformed or invalid query — has
+    no `path`; an error raised while resolving a field must carry one, naming
+    that field. So errors that all carry a path starting at the person search
+    are the API declining part of an answer it was otherwise able to give: a
+    record withheld for privacy compliance is that case. Authentication, credits
+    and throttling arrive as HTTP statuses before any of this, and still raise.
+
+    The whole lookup is treated as withheld, even if other records came back
+    beside the error: a lookup is for one person, and part of an answer about
+    them is not one to report.
+    """
+    return bool(errors) and all(
+        isinstance(e.get("path"), list) and e["path"][:1] == [root] for e in errors
+    )
+
+
+def _codes(errors: list) -> str:
+    """The provider's codes for a withheld record, for the log — never its
+    message, which can name the person."""
+    codes = sorted(
+        {str((e.get("extensions") or {}).get("code") or "") for e in errors} - {""}
+    )
+    return ", ".join(codes)
 
 
 def _person(record: dict) -> Person:

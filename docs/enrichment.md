@@ -49,6 +49,11 @@ provider at a time: with two, the run refuses to start rather than choosing
 between them, because a person one provider cannot find is reported as not
 found in *it* — never filled from another.
 
+**Use the plain secret key, not the Base64 one.** LeadIQ's settings page offers
+both. The client sends the key as HTTP Basic auth — the key as the username, an
+empty password — and does the Base64 encoding itself. Given the Base64 form, it
+encodes it a second time, and every call returns 401.
+
 **The first thing a run does with it** is one free account query, before the
 database is read or a CRM is called. A key that does not work fails there, not
 after everything else has been paid for. The log line names the plan and the
@@ -129,6 +134,22 @@ how well the LinkedIn field is filled, so the run log states each week how many
 stakeholders were matched on email and how many on LinkedIn — measure yours
 rather than borrowing these. Anything still unmatched reads
 **"not found in LeadIQ"** — never inferred, never filled from elsewhere.
+
+### A person the provider withholds
+
+LeadIQ can hold a record it will not return — a person whose details are
+withheld for privacy compliance. The lookup then answers with an error rather
+than a result. That person reads **"not found in LeadIQ"** like any other miss,
+the run carries on, and the log line that counts lookups adds how many were
+withheld, with LeadIQ's code for why where it gives one.
+
+It is recognised from the shape of the error, not its wording: an error the
+API raises while answering a person search names that search in its `path`, as
+the GraphQL specification requires. Every other error still stops the run — an
+error with no path, one outside a person search, one on a company lookup or the
+account check, and any HTTP failure. So does a run in which **every** person
+lookup came back withheld: that is the provider not answering, and reporting
+everyone as not found would hide it.
 
 ---
 

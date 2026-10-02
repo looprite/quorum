@@ -9,7 +9,7 @@ from __future__ import annotations
 import pytest
 
 from quorum import enrich
-from quorum.enrich import Company, Person
+from quorum.enrich import Company, Person, Withheld
 from quorum.enrich.leadiq import (
     COMPANY_QUERY,
     PERSON_QUERY,
@@ -195,6 +195,64 @@ def test_a_graphql_error_raises():
     post = _Post(_Resp({"errors": [{"message": "Cannot query field"}]}))
     with pytest.raises(LeadIQError, match="Cannot query field"):
         LeadIQ(KEY, post=post).company_by_domain("acme.example")
+
+
+# A response shaped as the GraphQL specification requires for an error raised
+# while resolving a field: a `path` naming it. The code and message are
+# invented; the run never reads the message.
+def _field_error(path, code="EXAMPLE_WITHHELD"):
+    return {"message": "Example message", "path": path, "extensions": {"code": code}}
+
+
+def test_a_field_error_under_the_person_search_is_a_withheld_record():
+    post = _Post(_Resp({
+        "data": None,
+        "errors": [_field_error(["searchPeople", "results", 0, "currentPositions"])],
+    }))
+    with pytest.raises(Withheld) as err:
+        LeadIQ(KEY, post=post).person_by_email("dana@acme.example")
+    # The provider's code is kept for the log; its message, which can name the
+    # person, is not.
+    assert str(err.value) == "EXAMPLE_WITHHELD"
+    assert "Example message" not in str(err.value)
+
+
+def test_a_linkedin_lookup_can_be_withheld_too():
+    post = _Post(_Resp({"data": None, "errors": [_field_error(["searchPeople"], code="")]}))
+    with pytest.raises(Withheld) as err:
+        LeadIQ(KEY, post=post).person_by_linkedin("https://www.linkedin.com/in/dana-reyes")
+    assert str(err.value) == ""
+
+
+def test_an_error_with_no_path_still_raises():
+    """A request error — a malformed or invalid query — carries no path. That
+    is the run being wrong, not a record being withheld."""
+    post = _Post(_Resp({"errors": [{"message": "Cannot query field"}]}))
+    with pytest.raises(LeadIQError, match="Cannot query field"):
+        LeadIQ(KEY, post=post).person_by_email("dana@acme.example")
+
+
+def test_one_error_outside_the_person_search_makes_the_whole_response_raise():
+    post = _Post(_Resp({"errors": [
+        _field_error(["searchPeople", "results", 0]),
+        {"message": "Something else"},
+    ]}))
+    with pytest.raises(LeadIQError):
+        LeadIQ(KEY, post=post).person_by_email("dana@acme.example")
+
+
+def test_field_errors_on_a_company_lookup_or_the_account_check_still_raise():
+    """Only a person can be withheld. A company or the account failing is the
+    provider not answering."""
+    post = _Post(
+        _Resp({"errors": [_field_error(["searchCompany"])]}),
+        _Resp({"errors": [_field_error(["account"])]}),
+    )
+    provider = LeadIQ(KEY, post=post)
+    with pytest.raises(LeadIQError):
+        provider.company_by_domain("acme.example")
+    with pytest.raises(LeadIQError):
+        provider.check()
 
 
 def test_throttling_is_waited_out(monkeypatch):

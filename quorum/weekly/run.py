@@ -253,6 +253,7 @@ def run_weekly(cfg: Config, log=print) -> dict:
         if enriching:
             enrichment_mod.stakeholders(enriching, stakeholders)
             enrichment_mod.not_in_crm(enriching, reconciled)
+            enrichment_mod.check_withheld(enriching)
             queue = enrichment_mod.review_queue(enriching, coverage, stakeholders)
             moved = sum(1 for r in stakeholders if str(r.get("still_at", "")).startswith("no —"))
             on_email = sum(1 for r in stakeholders if r.get("matched_on") == "email")
@@ -262,6 +263,12 @@ def run_weekly(cfg: Config, log=print) -> dict:
                 f"up by email and {enriching.linkedin_looked_up} by LinkedIn URL; "
                 f"stakeholders matched on email {on_email}, on LinkedIn {on_linkedin}; "
                 f"{moved} may have left, {len(queue)} item(s) in the review queue"
+                + (
+                    f"; {enriching.withheld} lookup(s) withheld by {provider.display_name}"
+                    + (f" (codes: {', '.join(sorted(enriching.withheld_codes))})"
+                       if enriching.withheld_codes else "")
+                    if enriching.withheld else ""
+                )
             )
 
         describe = sf.describe_contact() if sf.configured else {"checked": False}

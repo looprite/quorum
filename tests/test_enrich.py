@@ -448,6 +448,63 @@ def test_one_crm_with_a_provider_still_compares_no_two_crms(tmp_path):
                 assert "title only in" not in str(v or "")
 
 
+def test_a_withheld_person_is_counted_shown_as_not_found_and_the_run_carries_on(tmp_path):
+    """One record the provider will not show is one person not found — not a
+    run with no artifact."""
+    from quorum.enrich import Withheld
+
+    class _Withholding(_Provider):
+        def person_by_email(self, email):
+            if email == "ari@acme.example":
+                self.person_calls.append(email)
+                raise Withheld("EXAMPLE_WITHHELD")
+            return super().person_by_email(email)
+
+    provider = _Withholding()
+    cfg, sf, hs = _cfg(), _SF(), _HS()
+    reconciled = [people_mod.reconcile(p, sf, hs) for p in _attendees()]
+    pass_ = enrichment.start(provider)
+    enrichment.not_in_crm(pass_, reconciled)
+    enrichment.check_withheld(pass_)
+
+    ari = next(r for r in reconciled if r.get("email") == "ari@acme.example")
+    assert ari["other_found"] is False
+    assert ari["other_name"] == "not found in Example"
+    assert pass_.withheld == 1
+    assert pass_.withheld_codes == {"EXAMPLE_WITHHELD"}
+    # Everyone else not in the CRM was still looked up.
+    assert len(provider.person_calls) == pass_.people_looked_up > 1
+
+
+def test_every_lookup_withheld_is_the_provider_not_answering():
+    from quorum.enrich import Withheld
+
+    class _WithholdsAll(_Provider):
+        def person_by_email(self, email):
+            raise Withheld("")
+
+    pass_ = enrichment.start(_WithholdsAll())
+    cfg, sf, hs = _cfg(), _SF(), _HS()
+    reconciled = [people_mod.reconcile(p, sf, hs) for p in _attendees()]
+    enrichment.not_in_crm(pass_, reconciled)
+    assert pass_.people_looked_up > 1
+    with pytest.raises(enrichment.EveryLookupWithheld):
+        enrichment.check_withheld(pass_)
+
+
+def test_a_single_lookup_withheld_is_not_taken_for_an_outage():
+    from quorum.enrich import Withheld
+
+    class _WithholdsAll(_Provider):
+        def person_by_email(self, email):
+            raise Withheld("")
+
+    pass_ = enrichment.start(_WithholdsAll())
+    pass_.person("ari@acme.example")
+    enrichment.check_withheld(pass_)  # one lookup cannot tell the two apart
+    assert pass_.withheld == 1
+
+
 def test_two_configured_providers_are_refused(monkeypatch):
     class _A:
         display_name, env_vars = "A", ("A_KEY",)

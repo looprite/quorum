@@ -19,6 +19,13 @@ and optionally:
   person_by_linkedin(url)    -> Person or None, accepted only when the record's
                                 LinkedIn handle is the one searched for
 
+A person lookup may raise `Withheld` when the provider declines to return that
+one record — a person it holds but will not show, for privacy compliance. The
+run counts it and carries on, showing the person as not found. Anything else a
+provider raises stops the run. Each provider decides how its own API signals a
+withheld record, from the protocol rather than from message text, so nothing
+here depends on a provider's wording or on its support team.
+
 The weekly run tries LinkedIn only when an email lookup finds nothing and the
 CRM holds a LinkedIn URL for the person — an email address goes stale exactly
 when someone changes jobs, and a profile URL usually does not. A provider
@@ -93,6 +100,15 @@ def linkedin_handle(url: str) -> str:
     """
     m = _HANDLE.search(url or "")
     return m.group(1).strip().lower().rstrip("/") if m else ""
+
+
+class Withheld(Exception):
+    """The provider declined to return this one record.
+
+    Raised by a person lookup, never by the account check or a company lookup.
+    The message is the provider's own code for why, or empty — never its message
+    text, which can name the person.
+    """
 
 
 class MoreThanOneProvider(RuntimeError):
