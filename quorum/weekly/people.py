@@ -2,7 +2,7 @@
 
 Step 2 serves: one row per person on tab 1 rather than one per meeting attended,
 and the company keys tabs 2 and 3 are built on.
-Step 3 serves: tab 1's in-CRM column(s), Title / LinkedIn? / Mobile in CRM? /
+Step 3 serves: tab 1's in-CRM column(s), Title / LinkedIn (CRM) / Mobile in CRM? /
 Flag, and the order of its rows.
 """
 
@@ -237,5 +237,10 @@ def reconcile(person: dict, sf: Salesforce, hs: HubSpot) -> dict:
             else NOT_CHECKED
         ),
         "linkedin_in_crm": _linkedin_presence(sf, sf_rec),
+        # The URL itself, for the column; presence above is what the summary
+        # counts. Blank when the record holds none.
+        "linkedin_url_in_crm": (sf_rec.linkedin if sf_rec and sf_rec.linkedin else ""),
+        # The CRM's own name for them, for checking a provider's record against.
+        "crm_name": crm_name,
         "flag": "; ".join(flags),
     }

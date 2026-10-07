@@ -298,7 +298,7 @@ ACCESSOR = re.compile(
         ('name = props["firstname"]', True),
         # Our own keys, and spreadsheet column headers, stay legal.
         ('email = (person.get("email") or "").strip()', False),
-        ('["Name", "Email", "Title (SF)", "LinkedIn?"]', False),
+        ('["Name", "Email", "Title (SF)", "LinkedIn (CRM)"]', False),
         ('if col == "Name" and v.startswith("—"):', False),
         ('out["name"] = firmo.get("name", "")', False),
     ],

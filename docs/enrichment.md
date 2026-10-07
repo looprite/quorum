@@ -173,8 +173,23 @@ everyone as not found would hide it.
 `LinkedIn (LeadIQ)`, filled for the people not in your CRM: who the provider
 says each of them is, and the profile to connect with. `not found in LeadIQ`
 where it has no record; `not looked up — shared inbox` for a role address.
-People already in your CRM are not looked up here — the stakeholder list is
-where the provider is set beside a CRM record.
+
+**People already in your CRM are looked up here only when their Title is
+blank.** A record with no title can never reach the stakeholder list, which is
+built from the CRM's Title, so a senior person with a blank title would stay
+invisible. For each such person the provider is asked by email, and its record
+is used only if it agrees on first and last name with the CRM contact (the same
+rule as above; a disagreement is the queue row **CRM email may belong to someone
+else** and fills nothing). Where accepted, the three provider columns are filled
+for that row too, and the queue gets **Title missing in CRM**: the CRM's blank
+beside the provider's title (`now at <company>, as <title>` where the provider
+places them elsewhere), with the CRM's LinkedIn URL, or the provider's if the CRM has none.
+
+**This never puts anyone on the stakeholder list.** The list stays built from
+the CRM's Title. The queue row is how someone gets the CRM fixed; once the Title
+is filled in, the next run picks the person up. Everyone else already in your
+CRM is not looked up here — the stakeholder list is where the provider is set
+beside a CRM record.
 
 **Tab 2 — Company coverage** gains `Employees (LeadIQ)`, `HQ (LeadIQ)` and
 `Profile check`. The comparison is the **verdict**, not the number: your ICP
@@ -234,11 +249,12 @@ sub-heading per kind, with its count.
 | Profile fit disputed | The two sources give different ICP answers |
 | Company not found in `<provider>` | Your CRM has both the employee count and the HQ, and the provider has no record of the company, so those numbers get no second opinion |
 | Headcount or HQ missing | Either source lacks the employee count or HQ the ICP test needs |
-| May have left | The provider places the person at a different company |
+| May have left | The provider places the person at a different company. The row ends `(<provider> record updated <date>)`: when the provider last refreshed its record, not when the person moved |
 | CRM LinkedIn may be someone else | The CRM's LinkedIn URL leads to a profile under a different name |
 | CRM email may belong to someone else | The provider's record at the CRM contact's email is under a different name |
 | Account may be linked to the wrong company | The CRM account's name does not resemble the domain it was reached through |
 | Title differs | The provider's title differs from the CRM's |
+| Title missing in CRM | A person met this week is in the CRM with no title, and the provider has one |
 | LinkedIn differs | The provider's LinkedIn URL differs from the CRM's |
 
 **Two domains.** Some companies email from one domain and are filed under
@@ -259,8 +275,10 @@ count of contacts at the domain and nothing about the company. Only someone
 correcting the contact's or the account's record can fix this; the queue says
 where to look.
 
-**The Summary tab** gains two things: how many of the people not in your CRM
-the provider found, out of those it looked up (shared inboxes are not), and
+**The Summary tab** gains three things: how many of the people not in your CRM
+the provider found, out of those it looked up (shared inboxes are not); the
+same for people in your CRM with no title (`In your CRM, no title, and found by
+<provider>`); and
 one row per review-queue kind with its count — zeros included, so a kind
 dropping to zero week on week is visible. Its footnote names the provider;
 with none configured, it says that instead, which is the one place a run that
@@ -296,8 +314,8 @@ record.
 
 **A week's spend at rate-card prices — work it out from your own counts.**
 The run makes one company lookup per company met; one person lookup per person
-on the stakeholder list and per person met who is not in your CRM, minus shared
-inboxes, which are never looked up; and a LinkedIn lookup only for the people
+on the stakeholder list and per person met who is not in your CRM or is in it
+with no title, minus shared inboxes, which are never looked up; and a LinkedIn lookup only for the people
 the email missed. Each of those is one record. So:
 
 ```

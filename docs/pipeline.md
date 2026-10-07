@@ -229,8 +229,8 @@ the JSON dump. `linkedin` is three-valued — a URL, `""` for nothing on file, a
   the answer they exist for; with one, a single `In CRM?`, and the tab's
   caption names the CRM ("Checked against Salesforce."); with none, no column —
   nobody can be missing from a CRM that was not asked.
-- tab 1 — `Title (CRM)`, `LinkedIn?`, `Mobile in CRM?`, `Flag`. The first three
-  report what a CRM record holds. With no CRM configured they are dropped
+- tab 1 — `Title (CRM)`, `LinkedIn (CRM)`, `Mobile in CRM?`, `Flag`. The first
+  three report what a CRM record holds; `LinkedIn (CRM)` is the URL itself. With no CRM configured they are dropped
   rather than filled; for a person with no record they read `—`, never `no`,
   because there is no record to have or lack anything. `Flag`'s `needs title`
   appears only for a record that exists without one.

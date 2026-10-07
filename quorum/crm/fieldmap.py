@@ -114,7 +114,7 @@ SPECS: dict[str, tuple[FieldSpec, ...]] = {
     "Contact": (
         FieldSpec(
             logical="linkedin_url",
-            serves="tab 1 'LinkedIn?' and tab 3 'LinkedIn'",
+            serves="tab 1 'LinkedIn (CRM)' and tab 3 'LinkedIn'",
             # The person's profile URL. Not the company's page, not a scraped
             # bio, not a location string, not a boolean 'uses LinkedIn'.
             include=r"linked_?in",

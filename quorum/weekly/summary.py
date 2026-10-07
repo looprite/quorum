@@ -113,6 +113,17 @@ def build(
                 sum(1 for r in held if not r.get("title")), len(held),
             )
         )
+        if other:
+            # Stable key; the label names the provider and the key does not.
+            looked_up_no_title = [r for r in held if "titleless_found" in r]
+            stats.append(
+                _stat(
+                    area, "people_in_crm_no_title_found",
+                    f"In your CRM, no title, and found by {other}",
+                    sum(1 for r in looked_up_no_title if r["titleless_found"]),
+                    len(looked_up_no_title),
+                )
+            )
         # Only where the CRM has a LinkedIn field to be empty.
         answerable = [
             r for r in held if r.get("linkedin_in_crm") not in (None, NOT_CHECKED)

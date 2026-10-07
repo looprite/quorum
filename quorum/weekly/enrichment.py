@@ -29,7 +29,7 @@ from typing import Optional
 from ..crm.fieldmap import NOT_AVAILABLE, NOT_CHECKED
 from ..enrich import Withheld, linkedin_handle
 from .coverage import meets_profile
-from .people import company_mismatch, missing_from_crm
+from .people import company_mismatch, in_any_crm, missing_from_crm
 from .stakeholders import ICP_NOT_ASSESSED, NO_SENIOR_CONTACT
 
 AGREES = "agrees"
@@ -62,6 +62,8 @@ class _Cached:
         # Email matches set aside because the provider's record carried another
         # person's name. A number, never names: it measures how often this fires.
         self.email_name_rejected = 0
+        # In-CRM records with no title that were looked up (tab 1).
+        self.titleless_looked_up = 0
         self.withheld_codes: set[str] = set()
 
     def _ask(self, lookup, value):
@@ -322,6 +324,62 @@ def not_in_crm(pass_: _Cached, reconciled: list[dict]) -> None:
             r["other_name"], r["other_title"], r["other_linkedin"] = p.name, p.title, p.linkedin
 
 
+def _position(p, domains: list[str]) -> tuple[str, str]:
+    """(title, company) the provider gives for this person, where the company is
+    "" if they are at one of `domains` and the new employer's name if not.
+    The title is the one at the company they are at, so it can be set beside the
+    CRM's blank."""
+    jobs = p.current_jobs or ((p.employer_domain, p.employer_name, p.title),)
+    here = next((j for j in map(p.job_at, domains) if j), None) if p.current_jobs else (
+        jobs[0] if jobs[0][0] in domains else None
+    )
+    if here or not any(j[0] for j in jobs):
+        return (here[2] if here else p.title), ""
+    first = next(j for j in jobs if j[0])
+    return first[2], first[1] or first[0]
+
+
+def in_crm_no_title(pass_: _Cached, reconciled: list[dict], coverage: list[dict] = ()) -> None:
+    """People met who are in the CRM with a blank Title: what does the provider
+    say they are?
+
+    Nothing here changes the stakeholder list, which is built from the CRM's
+    Title. The finding goes beside the CRM's blank and into the review queue, so
+    that someone fixes the CRM and the next run picks the person up.
+
+    The record has to agree on first and last name with the CRM contact, as
+    everywhere an email match is used; a disagreement fills nothing and is a
+    queue row. No name on either side leaves nothing to disagree with.
+    """
+    account = {c.get("domain"): (c.get("account_domain") or "").lower() for c in coverage}
+    for r in reconciled:
+        if not in_any_crm(r) or r.get("title") or not r.get("email"):
+            continue
+        if "shared inbox" in (r.get("flag") or ""):
+            continue
+        p = pass_.person(r["email"])
+        pass_.titleless_looked_up += 1
+        r["titleless_found"] = False
+        if p is None:
+            r["other_name"], r["other_title"], r["other_linkedin"] = (
+                not_found(pass_.provider), "", "")
+            continue
+        if p.name and _name_tokens(r.get("crm_name")) and not names_agree(
+            r.get("crm_name"), p.name
+        ):
+            r["email_other_person"] = p.name
+            pass_.email_name_rejected += 1
+            continue
+        domain = (r.get("domain") or "").lower()
+        domains = [domain] + ([account[r.get("domain")]] if account.get(r.get("domain"))
+                              and account[r.get("domain")] != domain else [])
+        title, now_at = _position(p, domains)
+        says = (f"now at {now_at}, as {title}" if title else f"now at {now_at}") if now_at else title
+        r["titleless_found"] = True
+        r["titleless_title"] = title
+        r["other_name"], r["other_title"], r["other_linkedin"] = p.name, says, p.linkedin
+
+
 # --- tab 4: the review queue ---------------------------------------------- #
 
 # The kinds, by stable key. One of them names the provider in its label (the
@@ -338,6 +396,7 @@ QUEUE_ORDER = (
     "CRM email may belong to someone else",
     "Account may be linked to the wrong company",
     "Title differs",
+    "Title missing in CRM",
     "LinkedIn differs",
 )
 
@@ -352,7 +411,9 @@ def queue_kinds(provider) -> tuple[tuple[str, str], ...]:
     return tuple((k, queue_label(k, provider)) for k in QUEUE_ORDER)
 
 
-def review_queue(pass_: _Cached, coverage: list[dict], rows: list[dict]) -> list[dict]:
+def review_queue(
+    pass_: _Cached, coverage: list[dict], rows: list[dict], met: list[dict] = ()
+) -> list[dict]:
     """Every item a person should settle, and nothing else.
 
     Written as a work queue rather than as CRM updates: Quorum writes nothing to
@@ -419,7 +480,8 @@ def review_queue(pass_: _Cached, coverage: list[dict], rows: list[dict]) -> list
         company = r.get("company", "")
         if r["still_at"].startswith("no —"):
             add("May have left", company, who, f"at {company}",
-                r["still_at"][len("no — "):] + (f" (updated {r['other_updated']})" if r.get("other_updated") else ""),
+                r["still_at"][len("no — "):] + (f" ({pass_.provider.display_name} record updated {r['other_updated']})"
+                   if r.get("other_updated") else ""),
                 CHECK_THEIR_LINKEDIN, linkedin=_crm_url(r))
         if r.get("other_title"):
             add("Title differs", company, who, r.get("title") or "(none)", r["other_title"],
@@ -427,6 +489,21 @@ def review_queue(pass_: _Cached, coverage: list[dict], rows: list[dict]) -> list
         if r.get("other_linkedin"):
             add("LinkedIn differs", company, who, r.get("linkedin") or "(none)", r["other_linkedin"],
                 "Open both — one may be someone else")
+
+    # People met this week who are in the CRM with no title (`in_crm_no_title`).
+    where = {c.get("domain"): c.get("name") or c.get("domain") for c in coverage}
+    for m in met:
+        company = where.get(m.get("domain")) or m.get("domain") or ""
+        who = m.get("crm_name") or m.get("attendee_name") or ""
+        crm_url = m.get("linkedin_url_in_crm") or ""
+        if m.get("email_other_person"):
+            add("CRM email may belong to someone else", company, who,
+                m.get("email") or "", f"record at that email is {m['email_other_person']}",
+                "Open their LinkedIn; the CRM email may be a colleague's", linkedin=crm_url)
+        if m.get("titleless_found") and m.get("titleless_title"):
+            add("Title missing in CRM", company, who, "(none)", m["other_title"],
+                "Open their LinkedIn; fill Title in the CRM",
+                linkedin=crm_url or m.get("other_linkedin") or "")
 
     rank = {label: i for i, (_, label) in enumerate(queue_kinds(pass_.provider))}
     queue.sort(key=lambda q: (rank.get(q["kind"], len(rank)), str(q["company"]).lower()))

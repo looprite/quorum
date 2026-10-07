@@ -90,6 +90,8 @@ def test_every_count_comes_with_what_it_is_out_of():
         "people_not_in_crm_found": (1, 2),
         "people_in_crm": (2, 5),
         "people_in_crm_no_title": (1, 2),
+        # Nobody was looked up here; the key does not carry the provider's name.
+        "people_in_crm_no_title_found": (0, 0),
         "people_in_crm_no_linkedin": (1, 2),
         "people_in_crm_no_mobile": (1, 2),
         "stakeholders": (2, None),

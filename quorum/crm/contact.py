@@ -13,7 +13,7 @@ Six fields, each one read by a column:
   mobile         tab 1 and tab 3 'Mobile in CRM?' — presence only. The number
                  itself never leaves the CRM: sensitive contact fields pass
                  through to it and never into a Quorum store.
-  linkedin       tab 1 'LinkedIn?' and tab 3 'LinkedIn'
+  linkedin       tab 1 'LinkedIn (CRM)' and tab 3 'LinkedIn'
   last_activity  one of the two sources behind tab 3 'Recent contact?'
 
 `linkedin` is three-valued on purpose, and it is the reason this is not simply a

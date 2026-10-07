@@ -22,7 +22,7 @@ from .people import in_any_crm, missing_from_crm
 from .stakeholders import NO_SENIOR_CONTACT
 
 # A CRM column for someone with no CRM record. Not "no" — that asserts a fact
-# about a record that does not exist — and not blank, which on LinkedIn? means
+# about a record that does not exist — and not blank, which on LinkedIn (CRM) means
 # "the CRM has the field and nothing in it". The in-CRM column beside it says
 # why, and the caption says what the dash means.
 NO_RECORD = "—"
@@ -42,8 +42,9 @@ def _sheet(wb: Workbook, title: str, headers: list[str]):
     return ws
 
 
-def _linkedin_cell(value) -> str:
-    """None is not False, and neither is NOT_CHECKED. A CRM with no LinkedIn
+def _linkedin_cell(value, url: str = "") -> str:
+    """The CRM's LinkedIn URL, with the same three other answers as before.
+    None is not False, and neither is NOT_CHECKED. A CRM with no LinkedIn
     field says so in the cell, a run with no CRM says *that*, and only a real
     False renders blank — so an empty column cannot be read as 'nobody has
     one'."""
@@ -51,7 +52,7 @@ def _linkedin_cell(value) -> str:
         return NOT_CHECKED
     if value is None:
         return NOT_AVAILABLE
-    return "yes" if value else ""
+    return (url or "yes") if value else ""
 
 
 def _mobile_cell(value) -> str:
@@ -180,7 +181,7 @@ def build_workbook(
         + (["In HubSpot?", "In Salesforce?"] if both_crms else ["In CRM?"] if crm_on else [])
         # "Title (CRM)", not "Title (SF)": the value comes from either CRM —
         # Salesforce wins, HubSpot is the fallback.
-        + (["Title (CRM)", "LinkedIn?", "Mobile in CRM?"] if crm_on else [])
+        + (["Title (CRM)", "LinkedIn (CRM)", "Mobile in CRM?"] if crm_on else [])
         + ([f"Name ({other})", f"Title ({other})", f"LinkedIn ({other})"] if other else [])
         + ["Flag", "Source"],
     )
@@ -197,15 +198,15 @@ def build_workbook(
             if in_any_crm(r):
                 row += [
                     r.get("title", ""),
-                    _linkedin_cell(r.get("linkedin_in_crm")),
+                    _linkedin_cell(r.get("linkedin_in_crm"), r.get("linkedin_url_in_crm", "")),
                     _mobile_cell(r.get("mobile_in_crm")),
                 ]
             else:
                 row += [NO_RECORD, NO_RECORD, NO_RECORD]
         if other:
-            # Filled only for people not in the CRM: for everyone else the CRM
-            # already holds a record, and the stakeholder list is where the
-            # provider is set beside it.
+            # Filled for people not in the CRM, and for people in it with no
+            # title; for everyone else the CRM already holds what the map needs,
+            # and the stakeholder list is where the provider is set beside it.
             row += [r.get("other_name", ""), r.get("other_title", ""),
                     r.get("other_linkedin", "")]
         ws_met.append(row + [r.get("flag", ""), "gong"])
@@ -218,7 +219,8 @@ def build_workbook(
             "People not in the CRM are listed first. — in a CRM column means there "
             "is no CRM record to read."
             + (f" The {other} columns are enrichment from {other}, not your CRM, and are"
-               " filled for these people only." if other else "")
+               " filled for people not in the CRM and for people in it with no title."
+               if other else "")
         )
     if suppressed:
         notes.append(

@@ -48,7 +48,7 @@ difference is the same one everywhere in this output:
   and there was nothing to read: no CRM record for that person, no
   firmographics to test that company against.
 - **`no`** means the run looked and the answer was no. Only this one is a
-  finding. An empty `LinkedIn?` cell says the same thing more quietly: your CRM
+  finding. An empty `LinkedIn (CRM)` cell says the same thing more quietly: your CRM
   has the field, and this person has nothing in it.
 
 So a column you expected and cannot find is a configuration problem, and a
@@ -93,7 +93,7 @@ see what was removed.
   reaching your data. If no CRM were configured the in-CRM column would not be
   there at all, so `NO` on every row means one was configured and is
   answering with nothing. The same goes for every person who *is* in the CRM
-  reading `no` under `Mobile in CRM?` and blank under `LinkedIn?`.
+  reading `no` under `Mobile in CRM?` and blank under `LinkedIn (CRM)`.
 - **Companies you know are large showing no employee count.** A company with no
   count is excluded from the map entirely rather than given the benefit of the
   doubt, so this silently shrinks tab 3.
@@ -121,7 +121,7 @@ happens in your own systems.
 | What you see | What it means | What a person does |
 |---|---|---|
 | Met, not in CRM (top of tab 1) | Somebody your team spoke to has no record | Decide whether they belong there, then add them. This is the most directly actionable thing in the file. |
-| In CRM, no title | The record exists but is thin | Fill it in at the source, so next week's run reads it |
+| In CRM, no title | The record exists but is thin, and without a title the person can never reach the stakeholder list | Fill it in at the source, so next week's run reads it. With a provider configured, a `Title missing in CRM` row on tab 4 gives you a title to start from. |
 | Company met, no employee count | Excluded from the map entirely | Fill the firmographics if the company matters to you |
 | Fits profile, no senior contact | The stakeholder gap | Find who the senior people there are. This is where a data provider or a browser extension earns its place, and it is a person's step, not a pipeline's. |
 | Fits profile, senior contacts present | The map did its job | Decide who is worth approaching |

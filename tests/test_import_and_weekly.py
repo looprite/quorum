@@ -731,7 +731,7 @@ def test_workbook_columns_follow_the_crms_configured(
     ws1 = wb["1 - Met this week"]
     assert _headers(ws1) == (
         ["Name", "Email", "Company (domain)"] + crm_columns
-        + (["Title (CRM)", "LinkedIn?", "Mobile in CRM?"] if crm_on else [])
+        + (["Title (CRM)", "LinkedIn (CRM)", "Mobile in CRM?"] if crm_on else [])
         + ["Flag", "Source"]
     )
 
@@ -760,7 +760,7 @@ def test_workbook_columns_follow_the_crms_configured(
     for col in crm_columns:
         assert dana[col] == "NO" and sam[col] == "yes"
     # No record: a dash, never "no".
-    assert (dana["Title (CRM)"], dana["LinkedIn?"], dana["Mobile in CRM?"]) == (NO_RECORD,) * 3
+    assert (dana["Title (CRM)"], dana["LinkedIn (CRM)"], dana["Mobile in CRM?"]) == (NO_RECORD,) * 3
     # A record with no mobile on it: a real "no".
     assert sam["Mobile in CRM?"] == "no"
     # No vendor is named on a row: which CRM was checked is the caption or the

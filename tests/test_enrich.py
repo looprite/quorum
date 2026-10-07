@@ -437,7 +437,7 @@ def test_the_review_queue_holds_what_a_person_should_settle(tmp_path):
     assert initech["Company"] == "Initech" and initech["LinkedIn"] in (None, "")
     assert "the only second opinion" in initech["Check"]
     moved = next(r for r in rows if r["What"] == "May have left" and r["Person"] == "Lee Park")
-    assert moved["Example says"].startswith("now at Globex, as CMO")
+    assert moved["Example says"] == "now at Globex, as CMO (Example record updated 2026-06-01)"
     ray = next(r for r in rows if r["What"] == "May have left" and r["Person"] == "Ray Oh")
     assert "(matched on LinkedIn)" in ray["Example says"]
     # Each person row carries the CRM's LinkedIn URL, and the Check says so.
@@ -1102,3 +1102,169 @@ def test_summary_labels_keep_words_nothing_earlier_said():
     ws = _summary_sheet(rows)
     view_mod.render_summary(ws, "Summary", set())
     assert ws["B6"].value == "In your CRM, no title, and no mobile"
+
+
+# --- people met who are in the CRM with no title ---------------------------- #
+
+
+def _titleless(**kw):
+    return {"attendee_name": "Sam Ito", "crm_name": "Sam Ito", "email": "sam@acme.example",
+            "domain": "acme.example", "in_salesforce": True, "in_hubspot": None,
+            "title": "", "flag": "needs title", "linkedin_in_crm": True,
+            "linkedin_url_in_crm": "https://www.linkedin.com/in/sam-ito", **kw}
+
+
+class _Sam(_Provider):
+    """The shared provider, plus someone the CRM holds without a title."""
+
+    def __init__(self, person):
+        super().__init__()
+        self.people["sam@acme.example"] = person
+
+
+def _run_with(tmp_path, provider, extra, enrich=True):
+    cfg, sf, hs = _cfg(), _SF(), _HS()
+    people = _attendees()
+    reconciled = [people_mod.reconcile(p, sf, hs) for p in people] + extra
+    coverage = coverage_mod.build_coverage(
+        cfg, people_mod.group_companies(people), PROFILE, sf, hs
+    )
+    pass_ = enrichment.start(provider) if enrich else None
+    queue = []
+    if pass_:
+        enrichment.companies(pass_, coverage, PROFILE)
+    rows, raw = stakeholders_mod.build(
+        cfg, coverage, coverage_mod.seniority_terms(PROFILE), {}, sf
+    )
+    if pass_:
+        enrichment.stakeholders(pass_, rows)
+        enrichment.not_in_crm(pass_, reconciled)
+        enrichment.in_crm_no_title(pass_, reconciled, coverage)
+        queue = enrichment.review_queue(pass_, coverage, rows, reconciled)
+    from quorum.weekly import summary as summary_mod
+
+    stats = summary_mod.build(
+        cfg, reconciled, coverage, rows, raw, PROFILE,
+        enrichment=provider.display_name if pass_ else None, queue=queue,
+        queue_kinds=enrichment.queue_kinds(provider) if pass_ else (),
+    )
+    xlsx = str(tmp_path / "weekly_stakeholder_map_2026-08-17.xlsx")
+    workbook_mod.build_workbook(
+        cfg, reconciled, coverage, [], rows, xlsx, profile=PROFILE, geo_label="North America",
+        enrichment=provider.display_name if pass_ else None, queue=queue, summary=stats,
+    )
+    return load_workbook(xlsx), pass_, rows, stats
+
+
+def _sam_person(**kw):
+    return Person(name="Sam Ito", title="VP Ops", employer_name="Acme",
+                  employer_domain="acme.example", linkedin="https://www.linkedin.com/in/sam-ito-pro",
+                  **kw)
+
+
+def test_a_titleless_crm_record_is_looked_up_and_reported_not_listed(tmp_path):
+    wb, pass_, rows, stats = _run_with(tmp_path, _Sam(_sam_person()), [_titleless()])
+    _, met = _table(wb["1 - Met this week"])
+    sam = next(r for r in met if r["Email"] == "sam@acme.example")
+
+    assert (sam["Name (Example)"], sam["Title (Example)"], sam["LinkedIn (Example)"]) == (
+        "Sam Ito", "VP Ops", "https://www.linkedin.com/in/sam-ito-pro")
+    assert sam["LinkedIn (CRM)"] == "https://www.linkedin.com/in/sam-ito"
+    _, queue = _table(wb["4 - Review queue"])
+    row = next(r for r in queue if r["What"] == "Title missing in CRM")
+    assert (row["Person"], row["CRM says"], row["Example says"], row["LinkedIn"]) == (
+        "Sam Ito", "(none)", "VP Ops", "https://www.linkedin.com/in/sam-ito")
+    assert row["Check"] == "Open their LinkedIn; fill Title in the CRM"
+    assert sum(1 for r in queue if r["What"] == "Title missing in CRM") == 1
+    # The list is still built from the CRM's Title: a provider's does not add anyone.
+    assert not any(r["name"] == "Sam Ito" for r in rows)
+    by = {s["key"]: (s["count"], s["out_of"], s["what"]) for s in stats}
+    assert by["people_in_crm_no_title_found"] == (1, 1, "In your CRM, no title, and found by Example")
+    assert by["queue:Title missing in CRM"][0] == 1
+    assert pass_.titleless_looked_up == 1
+
+
+def test_the_title_missing_row_falls_back_to_the_providers_url_and_names_a_move(tmp_path):
+    away = Person(name="Sam Ito", title="COO", employer_name="Hooli",
+                  employer_domain="hooli.example",
+                  linkedin="https://www.linkedin.com/in/sam-ito-pro",
+                  current_jobs=(("hooli.example", "Hooli", "COO"),))
+    wb, *_ = _run_with(tmp_path, _Sam(away), [_titleless(linkedin_url_in_crm="")])
+    _, queue = _table(wb["4 - Review queue"])
+    row = next(r for r in queue if r["What"] == "Title missing in CRM")
+
+    assert row["Example says"] == "now at Hooli, as COO"
+    assert row["LinkedIn"] == "https://www.linkedin.com/in/sam-ito-pro"
+
+
+def test_a_titleless_record_under_another_name_fills_nothing(tmp_path):
+    other = Person(name="Robin Hale", title="CRO", employer_name="Acme",
+                   employer_domain="acme.example")
+    wb, pass_, _, stats = _run_with(tmp_path, _Sam(other), [_titleless()])
+    _, met = _table(wb["1 - Met this week"])
+    sam = next(r for r in met if r["Email"] == "sam@acme.example")
+    _, queue = _table(wb["4 - Review queue"])
+
+    assert not any(sam[h] for h in ("Name (Example)", "Title (Example)", "LinkedIn (Example)"))
+    assert [r["What"] for r in queue].count("CRM email may belong to someone else") == 1
+    assert "Title missing in CRM" not in [r["What"] for r in queue]
+    assert pass_.email_name_rejected == 1
+    assert {s["key"]: s["count"] for s in stats}["people_in_crm_no_title_found"] == 0
+
+
+def test_a_shared_inbox_with_no_title_is_not_looked_up(tmp_path):
+    provider = _Sam(_sam_person())
+    inbox = _titleless(email="team@acme.example", flag="shared inbox — verify")
+    _run_with(tmp_path, provider, [inbox])
+    assert "team@acme.example" not in provider.person_calls
+
+
+def test_with_no_provider_a_titleless_record_is_not_looked_up(tmp_path):
+    provider = _Sam(_sam_person())
+    wb, pass_, _, stats = _run_with(tmp_path, provider, [_titleless()], enrich=False)
+
+    assert pass_ is None and provider.person_calls == []
+    headers, _ = _table(wb["1 - Met this week"])
+    assert not any("Example" in h for h in headers)
+    assert "4 - Review queue" not in wb.sheetnames
+    assert not any(s["key"] == "people_in_crm_no_title_found" for s in stats)
+
+
+def test_the_linkedin_column_holds_the_url_a_dash_or_the_reason():
+    from quorum.crm.fieldmap import NOT_AVAILABLE, NOT_CHECKED
+    from quorum.weekly.workbook import NO_RECORD, _linkedin_cell
+
+    url = "https://www.linkedin.com/in/sam-ito"
+    assert _linkedin_cell(True, url) == url
+    assert _linkedin_cell(False, "") == ""                    # a record with no URL
+    assert _linkedin_cell(None) == NOT_AVAILABLE              # a CRM with no field
+    assert _linkedin_cell(NOT_CHECKED) == NOT_CHECKED         # no Salesforce asked
+
+
+@pytest.mark.parametrize("sf_on,hs_on", [(True, False), (False, True), (True, True), (False, False)])
+def test_tab_1_linkedin_column_in_every_configured_state(tmp_path, sf_on, hs_on):
+    from quorum.crm.fieldmap import NOT_CHECKED
+    from quorum.weekly.workbook import NO_RECORD
+
+    cfg = _cfg()
+    cfg.salesforce.configured, cfg.hubspot.configured = sf_on, hs_on
+    url = "https://www.linkedin.com/in/sam-ito"
+    held = {"attendee_name": "Sam Ito", "email": "sam@acme.example", "domain": "acme.example",
+            "in_salesforce": True if sf_on else None, "in_hubspot": True if hs_on else None,
+            "title": "VP", "mobile_in_crm": True, "flag": "",
+            "linkedin_in_crm": True if sf_on else NOT_CHECKED,
+            "linkedin_url_in_crm": url if sf_on else ""}
+    absent = {**held, "attendee_name": "Dana Reyes", "email": "dana@acme.example",
+              "in_salesforce": False if sf_on else None, "in_hubspot": False if hs_on else None}
+    xlsx = str(tmp_path / "weekly_stakeholder_map_2026-08-17.xlsx")
+    workbook_mod.build_workbook(cfg, [held, absent], [], [], [], xlsx, profile=PROFILE,
+                                geo_label="North America")
+    headers, rows = _table(load_workbook(xlsx)["1 - Met this week"])
+    by = {r["Name"]: r for r in rows}
+
+    assert "LinkedIn?" not in headers
+    if not (sf_on or hs_on):
+        assert "LinkedIn (CRM)" not in headers
+        return
+    assert by["Sam Ito"]["LinkedIn (CRM)"] == (url if sf_on else NOT_CHECKED)
+    assert by["Dana Reyes"]["LinkedIn (CRM)"] == NO_RECORD
