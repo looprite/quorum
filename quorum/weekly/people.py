@@ -211,6 +211,11 @@ def reconcile(person: dict, sf: Salesforce, hs: HubSpot) -> dict:
         if missing:
             flags.append("needs " + " + ".join(missing))
 
+    # Met at this domain this week, yet the CRM says they have left: one of the
+    # two is wrong, and a person should look. Only where the CRM has such a field.
+    if sf_rec and sf_rec.left_company is True:
+        flags.append("marked as left in CRM")
+
     # These two flags compare one CRM with the other, so they exist only when
     # both were asked. With one configured, "title only in Salesforce" fired on
     # every row that had a title and on none without — it meant "has a title",

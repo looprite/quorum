@@ -296,6 +296,7 @@ def run_weekly(cfg: Config, log=print) -> dict:
         enrichment=provider.display_name if provider else None,
         queue=queue,
         queue_kinds=enrichment_mod.queue_kinds(provider) if provider else (),
+        marked_left_field=sf.left_company_available,
     )
     xlsx_path = os.path.join(cfg.output_dir, f"weekly_stakeholder_map_{week}.xlsx")
     workbook_mod.build_workbook(
@@ -308,6 +309,7 @@ def run_weekly(cfg: Config, log=print) -> dict:
         enrichment=provider.display_name if provider else None,
         queue=queue,
         summary=summary,
+        marked_left_field=sf.left_company_available,
     )
     log(f"[✓] Wrote {xlsx_path}")
 

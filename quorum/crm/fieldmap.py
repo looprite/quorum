@@ -68,7 +68,7 @@ class FieldSpec:
 TEXT = ("string", "url", "picklist", "textarea", "email", "phone")
 NUMERIC = ("int", "double", "currency", "percent")
 
-# The five logical fields the pipeline needs from a CRM. Nothing is specced "in
+# The logical fields the pipeline reads from a CRM. Nothing is specced "in
 # case" — each names the column it serves.
 SPECS: dict[str, tuple[FieldSpec, ...]] = {
     "Account": (
@@ -120,6 +120,16 @@ SPECS: dict[str, tuple[FieldSpec, ...]] = {
             include=r"linked_?in",
             exclude=r"company|location|bio|overview|using|status|score",
             types=("url", "string"),
+        ),
+        FieldSpec(
+            logical="left_company",
+            serves="tab 3 (a contact marked as left is left off the list) and tab 1 'Flag'",
+            # The box a person ticks when a contact has moved on. Optional, and
+            # unresolved means the pipeline behaves exactly as if it did not
+            # exist: no column, no count, no exclusion.
+            include=r"no[\s_]?longer|left[\s_]?company|former[\s_]?employee",
+            exclude=r"account|opportunit|lead",
+            types=("boolean",),
         ),
     ),
 }

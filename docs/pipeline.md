@@ -83,9 +83,9 @@ field map").
 admin adds a field or a package is installed, superseding the active version and
 keeping the old one so last week's artifact stays explicable.
 
-Five logical fields, each named for the column it serves: `employee_count`,
-`hq_country`, `hq_city`, `hq_state` on `Account`, and `linkedin_url` on
-`Contact`. For each, the resolver matches every field's API name and label
+Six logical fields, each named for the column it serves: `employee_count`,
+`hq_country`, `hq_city`, `hq_state` on `Account`, and `linkedin_url` and
+`left_company` on `Contact`. For each, the resolver matches every field's API name and label
 against an include pattern, drops the ones an exclude pattern or the field's
 type rules out, counts how many rows actually have each survivor populated, and
 stores them **in count order**.
@@ -106,6 +106,23 @@ CRM" — only `linkedin_url` has no standard equivalent. An unresolved
 **required** field stops the resolution: without a headcount field the ICP
 employee band cannot be applied, and the run would report every company as a
 fit.
+
+**`left_company` is the CRM's "no longer at the company" box** on `Contact`, and
+it is optional in a stronger sense than `linkedin_url`: *unresolved means the run
+behaves exactly as it did before* — no column, no count, no exclusion — rather
+than showing a "not available" message. It matches checkbox fields whose name or
+label says `no longer`, `left company` or `former employee`, and rejects any
+that mention an account, opportunity or lead. Where it resolves and is ticked
+for a contact: the contact is left off the stakeholder bench (the place goes to
+the next person), no `May have left` or `Title differs` row is raised for them,
+and their recent activity no longer counts toward "had a senior contact in the
+last N days". It is not silent: the Summary gains `Marked as left in your CRM,
+left off the list` (key `stakeholders_marked_left`) and the stakeholder list's
+caption says so, both only when the field resolved. On Met this week, a person
+who was just met at that domain but is marked as left gets the Flag `marked as
+left in CRM`, because one of the two is wrong. Only Salesforce is read for it;
+HubSpot contributes nothing here. Quorum writes nothing: ticking the box in the
+CRM is how a reviewer settles a `May have left` row, and the next run honours it.
 
 Salesforce unconfigured means no map and no error: that run reads no CRM fields
 at all. Salesforce configured with no map is fatal — every query would silently

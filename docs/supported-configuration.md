@@ -93,6 +93,12 @@ not been written.
 
 ## Behaviour worth knowing before you see the output
 
+**A "no longer at the company" box on Contact is honoured if the field map
+holds one.** Contacts it is ticked for are left off the stakeholder list and the
+Summary counts them. A deployment that took this version must run
+`quorum resolve-fields` for the field to be found; without it the run is
+unchanged.
+
 **Companies with no employee count are excluded**, failing the ICP test with
 "no size" rather than passing on the benefit of the doubt. Deliberate — a map
 that quietly includes companies it could not assess is worse than one that says

@@ -117,6 +117,7 @@ def build_workbook(
     enrichment: Optional[str] = None,
     queue: Optional[list[dict]] = None,
     summary: Optional[list[dict]] = None,
+    marked_left_field: bool = False,
 ) -> None:
     """`enrichment` is the configured provider's display name, or None.
 
@@ -325,6 +326,13 @@ def build_workbook(
             f"{cfg.recent_days} days. Titles come from the CRM and may be out of date."
         ]
     )
+    if marked_left_field:
+        ws_map.append(
+            [
+                "People your CRM marks as no longer at the company are left off this "
+                "list; the Summary counts them."
+            ]
+        )
     if other:
         ws_map.append(
             [

@@ -160,6 +160,12 @@ def build(
             continue
 
         bench = sf.senior_bench(company["domain"], terms)
+        # A contact the CRM marks as no longer at the company is not someone to
+        # approach. They are left off the bench so the place goes to the next
+        # person, and counted so that is never silent. None (no such field in
+        # this CRM) is not True, so an unresolved field changes nothing.
+        marked_left = [c for c in bench if c.left_company is True]
+        eligible = [c for c in bench if c.left_company is not True]
 
         # The phone NUMBER is redacted out of the dump. Sensitive contact fields
         # pass through to the CRM and are never persisted here; presence is the
@@ -178,8 +184,10 @@ def build(
                 "any_recent_contact": False,
             }
         )
+        if marked_left:
+            raw[-1]["marked_left"] = len(marked_left)
 
-        if not bench:
+        if not eligible:
             # A company with no senior CRM contact is a stated gap, not an
             # omission — the reader needs to see that we looked.
             rows.append(
@@ -198,7 +206,7 @@ def build(
             continue
 
         scored = []
-        for person in bench:
+        for person in eligible:
             email = person.email.strip().lower()
             contact = recent_contact(cfg, history.get(email), person.last_activity)
             scored.append(

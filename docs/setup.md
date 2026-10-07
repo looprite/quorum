@@ -1258,6 +1258,14 @@ usually a pin, not a defect.
 A new migration is numbered above the highest one you have applied; apply the
 ones you have not, in filename order.
 
+**After taking the version that reads the CRM's "no longer at the company" box,
+run `quorum resolve-fields`.** The field map is stored in your database, not in
+the code, so a map resolved by an earlier version does not contain it and the
+new field is simply not picked up — contacts marked as left stay on the list.
+Nothing else is needed, and until you do nothing changes: an unresolved field
+means behaviour exactly as before. The `quorum resolve-fields` output names the
+fields it resolved; look for `Contact.left_company`.
+
 Re-run `quorum resolve-fields` when your Salesforce admin adds a field, installs
 or removes a package, or when a column in the artifact stops looking right. The
 superseded version is kept, inactive, so what last week's output read stays

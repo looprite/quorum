@@ -121,6 +121,7 @@ happens in your own systems.
 | What you see | What it means | What a person does |
 |---|---|---|
 | Met, not in CRM (top of tab 1) | Somebody your team spoke to has no record | Decide whether they belong there, then add them. This is the most directly actionable thing in the file. |
+| Flag `marked as left in CRM` (tab 1) | You met them this week, but your CRM has them ticked as no longer at the company. Only with a CRM box for it. | One of the two is wrong: check, and correct the CRM if they have not left |
 | In CRM, no title | The record exists but is thin, and without a title the person can never reach the stakeholder list | Fill it in at the source, so next week's run reads it. With a provider configured, a `Title missing in CRM` row on tab 4 gives you a title to start from. |
 | Company met, no employee count | Excluded from the map entirely | Fill the firmographics if the company matters to you |
 | Fits profile, no senior contact | The stakeholder gap | Find who the senior people there are. This is where a data provider or a browser extension earns its place, and it is a person's step, not a pipeline's. |

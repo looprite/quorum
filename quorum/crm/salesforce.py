@@ -93,6 +93,12 @@ class Salesforce:
         return self._cfg.configured
 
     @property
+    def left_company_available(self) -> bool:
+        """Does this CRM hold a "no longer at the company" box for contacts?
+        Only if the field map resolved one; without it nothing changes."""
+        return self.fields.available("Contact", "left_company")
+
+    @property
     def linkedin_available(self) -> bool:
         """Does this CRM hold the person's LinkedIn URL at all?
 
@@ -274,6 +280,11 @@ class Salesforce:
                 else None
             ),
             last_activity=_text(record.get("LastActivityDate")),
+            left_company=(
+                bool(self.fields.value(record, "Contact", "left_company"))
+                if self.left_company_available
+                else None
+            ),
             provenance={**record, "MobilePhone": bool(record.get("MobilePhone"))},
         )
 

@@ -45,6 +45,7 @@ def build(
     enrichment: Optional[str] = None,
     queue: Optional[list[dict]] = None,
     queue_kinds: tuple[tuple[str, str], ...] = (),
+    marked_left_field: bool = False,
 ) -> list[dict]:
     """-> the stats, in the order the Summary tab shows them."""
     crm_on = cfg.salesforce.configured or cfg.hubspot.configured
@@ -150,6 +151,16 @@ def build(
     ]
     if assessed:
         stats.append(_stat(area, "stakeholders", "People on the list", len(listed)))
+        if marked_left_field:
+            # Only where the CRM has the box, so a CRM without one has no row
+            # saying zero. Said, so a contact left off is never silent.
+            stats.append(
+                _stat(
+                    area, "stakeholders_marked_left",
+                    "Marked as left in your CRM, left off the list",
+                    sum(b.get("marked_left", 0) for b in bench_raw),
+                )
+            )
         stats.append(
             _stat(
                 area, "stakeholders_no_title", "No title in the CRM",

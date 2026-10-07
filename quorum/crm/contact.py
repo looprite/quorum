@@ -41,6 +41,10 @@ class Contact:
     mobile: bool = False
     linkedin: Optional[str] = None
     last_activity: str = ""
+    # The CRM's "no longer at the company" box. Three-valued, like `linkedin`:
+    # True / False where this CRM has such a field, None where it has none (or
+    # none was resolved), which is not the same as False and changes nothing.
+    left_company: Optional[bool] = None
 
     # The CRM's own record, with any sensitive field already reduced by the
     # adapter that built it. Opaque above this layer: it exists so the JSON dump
