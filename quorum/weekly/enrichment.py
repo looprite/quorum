@@ -59,6 +59,9 @@ class _Cached:
         self.can_search_linkedin = hasattr(provider, "person_by_linkedin")
         # Records the provider declined to return, and its codes for why.
         self.withheld = 0
+        # Email matches set aside because the provider's record carried another
+        # person's name. A number, never names: it measures how often this fires.
+        self.email_name_rejected = 0
         self.withheld_codes: set[str] = set()
 
     def _ask(self, lookup, value):
@@ -173,6 +176,15 @@ def companies(pass_: _Cached, coverage: list[dict], profile: dict) -> None:
     for c in coverage:
         found = pass_.company(c.get("domain"))
         c["disputed"] = False
+        # Some companies email from one domain and are filed under another. If
+        # the domain met finds nothing, try the account's own once; the cell
+        # says which one answered.
+        via = ""
+        alt = (c.get("account_domain") or "").strip().lower()
+        if found is None and alt and alt != (c.get("domain") or "").strip().lower():
+            found = pass_.company(alt)
+            if found is not None:
+                via = f" (looked up as {alt})"
         if found is None:
             c["other_employees"] = None
             c["other_hq"] = ""
@@ -187,11 +199,11 @@ def companies(pass_: _Cached, coverage: list[dict], profile: dict) -> None:
         said = "yes" if ok else f"no ({why})"
 
         if not c.get("assessed", True):
-            c["verdict_check"] = f"CRM not assessed — {name} says {said}"
+            c["verdict_check"] = f"CRM not assessed — {name} says {said}{via}"
         elif (c.get("meets") == "yes") == bool(ok):
-            c["verdict_check"] = AGREES
+            c["verdict_check"] = AGREES + via
         else:
-            c["verdict_check"] = f"disputed — {name} says {said}"
+            c["verdict_check"] = f"disputed — {name} says {said}{via}"
             c["disputed"] = True
 
 
@@ -215,6 +227,16 @@ def stakeholders(pass_: _Cached, rows: list[dict]) -> None:
             continue
         p = pass_.person(r["_email"])
         suffix = ""
+        # An email can belong to a colleague (a shared or recycled first-name
+        # address), and the provider then returns the colleague. The record has
+        # to agree on first and last name, as the LinkedIn fallback already
+        # requires. Nothing to disagree with if either side has no name.
+        if p is not None and p.name and _name_tokens(r.get("name")) and not names_agree(
+            r.get("name"), p.name
+        ):
+            r["email_other_person"] = p.name
+            pass_.email_name_rejected += 1
+            p = None
         if p is not None:
             r["matched_on"] = "email"
         else:
@@ -237,8 +259,16 @@ def stakeholders(pass_: _Cached, rows: list[dict]) -> None:
             continue
 
         domain = (r.get("domain") or "").lower()
+        # The domain met, or the account's own where they differ.
+        domains = [domain]
+        account_domain = (r.get("account_domain") or "").lower()
+        if account_domain and account_domain != domain:
+            domains.append(account_domain)
         jobs = p.current_jobs or ((p.employer_domain, p.employer_name, p.title),)
-        here = p.job_at(domain) if p.current_jobs else (jobs[0] if jobs[0][0] == domain else None)
+        if p.current_jobs:
+            here = next((j for j in map(p.job_at, domains) if j), None)
+        else:
+            here = jobs[0] if jobs[0][0] in domains else None
         if here:
             # Among their current positions, even if not the first listed: a
             # full-time role elsewhere plus a seat here is still "here".
@@ -305,6 +335,7 @@ QUEUE_ORDER = (
     "Headcount or HQ missing",
     "May have left",
     "CRM LinkedIn may be someone else",
+    "CRM email may belong to someone else",
     "Account may be linked to the wrong company",
     "Title differs",
     "LinkedIn differs",
@@ -376,6 +407,11 @@ def review_queue(pass_: _Cached, coverage: list[dict], rows: list[dict]) -> list
             add("CRM LinkedIn may be someone else", r.get("company", ""), r.get("name", ""),
                 r.get("linkedin") or "", f"profile at that URL is {r['linkedin_other_person']}",
                 "Open the CRM's LinkedIn URL", linkedin=_crm_url(r))
+        if r.get("email_other_person"):
+            add("CRM email may belong to someone else", r.get("company", ""), r.get("name", ""),
+                r.get("_email") or "", f"record at that email is {r['email_other_person']}",
+                "Open their LinkedIn; the CRM email may be a colleague's",
+                linkedin=_crm_url(r))
         if not r.get("still_at") or r.get("still_at") == not_found(pass_.provider):
             continue
         who = r.get("name", "")

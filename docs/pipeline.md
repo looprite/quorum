@@ -382,7 +382,8 @@ person half runs after step 5.
 Three rules shape the output. **A provider value is never written over a CRM
 value** — it is shown beside it, and a disagreement becomes a review-queue row.
 **A result is accepted only if it is the person or company asked about** — the
-searched email on the record, the searched domain on the company, the searched
+searched email on the record (and, on the stakeholder list, the CRM
+contact's name on it), the searched domain on the company, the searched
 LinkedIn handle on the profile *and* the CRM contact's name on it — because a
 lookup can return someone else at full confidence, and a CRM's LinkedIn URL can
 point at someone else. **A miss is stated**, as

@@ -107,6 +107,20 @@ current or past position. A past position counts: the address in your CRM is
 often the one they left behind, and the record's current employer is then the
 finding. Companies are held to the same rule on domain.
 
+**For people on the stakeholder list, an email match must also agree on first
+and last name** with the CRM contact (same comparison as below: case, accents,
+punctuation and middle names ignored). A CRM email can belong to a colleague — a
+shared or recycled first-name address — and the provider then returns the
+colleague, which would read as "still there" with the colleague's title. When
+the names disagree the record is not used for that row: the run carries on as if
+the email had found nothing, tries the CRM's LinkedIn URL, and otherwise reports
+`not found in <provider>`. The contact also gets a review-queue row, **CRM email
+may belong to someone else**. A provider record with no name is accepted, since
+there is nothing to disagree with. People not in the CRM (Met this week) are not
+held to this: names from meetings are too often partial. The run log counts the
+email matches rejected on name, so how often this fires can be read off it;
+nickname differences (Mike and Michael) land here too.
+
 ### When the email finds nothing, the CRM's LinkedIn URL is tried
 
 An email address goes stale exactly when someone changes jobs — the event this
@@ -222,9 +236,18 @@ sub-heading per kind, with its count.
 | Headcount or HQ missing | Either source lacks the employee count or HQ the ICP test needs |
 | May have left | The provider places the person at a different company |
 | CRM LinkedIn may be someone else | The CRM's LinkedIn URL leads to a profile under a different name |
+| CRM email may belong to someone else | The provider's record at the CRM contact's email is under a different name |
 | Account may be linked to the wrong company | The CRM account's name does not resemble the domain it was reached through |
 | Title differs | The provider's title differs from the CRM's |
 | LinkedIn differs | The provider's LinkedIn URL differs from the CRM's |
+
+**Two domains.** Some companies email from one domain and are filed under
+another. With Salesforce, the account's standard `Website` field (reduced to a
+bare domain) is read as well: `Still at company?` counts a current position at
+either domain as "here", and when the company lookup finds nothing for the
+domain met it tries the account's domain once. The Profile check cell then says
+which answered, for example `agrees (looked up as acme.example)`. With HubSpot
+only there is no account, so neither applies.
 
 **Account linking** is the one no lookup fixes. With Salesforce, the map
 reaches a CRM account through the company's contacts: the account a contact at

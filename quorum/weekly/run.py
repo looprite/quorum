@@ -262,7 +262,8 @@ def run_weekly(cfg: Config, log=print) -> dict:
                 f"[*] {provider.display_name}: {enriching.people_looked_up} people looked "
                 f"up by email and {enriching.linkedin_looked_up} by LinkedIn URL; "
                 f"stakeholders matched on email {on_email}, on LinkedIn {on_linkedin}; "
-                f"{moved} may have left, {len(queue)} item(s) in the review queue"
+                f"{moved} may have left, {len(queue)} item(s) in the review queue; "
+                f"{enriching.email_name_rejected} email match(es) rejected on name"
                 + (
                     f"; {enriching.withheld} lookup(s) withheld by {provider.display_name}"
                     + (f" (codes: {', '.join(sorted(enriching.withheld_codes))})"

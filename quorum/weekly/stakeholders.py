@@ -146,6 +146,7 @@ def build(
             rows.append(
                 {
                     "domain": company["domain"],
+                    "account_domain": company.get("account_domain", ""),
                     "company": company.get("name") or company["domain"],
                     "disputed": bool(company.get("disputed")),
                     "name": ICP_NOT_ASSESSED,
@@ -183,6 +184,7 @@ def build(
             rows.append(
                 {
                     "domain": company["domain"],
+                    "account_domain": company.get("account_domain", ""),
                     "company": company.get("name") or company["domain"],
                     "disputed": bool(company.get("disputed")),
                     "name": NO_SENIOR_CONTACT,
@@ -201,6 +203,7 @@ def build(
             scored.append(
                 {
                     "domain": company["domain"],
+                    "account_domain": company.get("account_domain", ""),
                     "company": company.get("name") or company["domain"],
                     "disputed": bool(company.get("disputed")),
                     "name": person.name,

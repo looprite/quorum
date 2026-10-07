@@ -30,6 +30,7 @@ from typing import Any, Optional
 import requests
 
 from ..config import Config
+from ..domains import bare_domain
 from .contact import Contact
 from .fieldmap import FieldMap
 
@@ -53,7 +54,8 @@ CONTACT_STANDARD = [
     "Id", "Name", "Title", "MobilePhone", "Email", "AccountId", "Account.Name"
 ]
 
-ACCOUNT_STANDARD = ["Name", "Type"]
+# Website is a standard field in every org, so it needs no field-map entry.
+ACCOUNT_STANDARD = ["Name", "Type", "Website"]
 
 
 def soql_quote(value: str) -> str:
@@ -192,6 +194,9 @@ class Salesforce:
         out = {
             "name": "", "employees": "", "hq": "", "account_type": "",
             "country": "", "city": "", "state": "",
+            # The account's Website, reduced to a bare domain. Some companies
+            # email from one domain and are filed under another.
+            "account_domain": "",
         }
         if not account_id or not self.configured:
             return out
@@ -202,6 +207,7 @@ class Salesforce:
         r = ((recs or {}).get("records") or [{}])[0]
         out["name"] = r.get("Name") or ""
         out["account_type"] = r.get("Type") or ""
+        out["account_domain"] = bare_domain(r.get("Website"))
         out["employees"] = self.fields.value(r, "Account", "employee_count")
         out["city"] = self.fields.value(r, "Account", "hq_city")
         out["state"] = self.fields.value(r, "Account", "hq_state")

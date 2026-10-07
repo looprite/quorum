@@ -825,3 +825,186 @@ def test_the_summary_is_one_line_per_tab():
 def test_the_page_links_each_summary_tab_to_its_section(tmp_path):
     html = _run(tmp_path, _Provider())[1]  # no Summary sheet in this run
     assert 'id="review-queue"' in html and 'id="stakeholder-list"' in html
+
+
+# --- two domains, and an email that is someone else's ------------------------ #
+
+
+def _row(**kw):
+    return {"name": "Sam Ito", "_email": "sam@acme.example", "domain": "acme.example",
+            "company": "Acme", "title": "VP Ops", **kw}
+
+
+def _still_at(person, **row):
+    r = _row(**row)
+    enrichment.stakeholders(enrichment.start(_OnePerson(person)), [r])
+    return r["still_at"]
+
+
+@pytest.mark.parametrize("jobs", [True, False])
+def test_either_domain_counts_as_here(jobs):
+    """Email from one domain, company on another: a position at the account's
+    Website domain is still the same company."""
+    at = ("acme.example", "Acme", "VP Ops")
+    elsewhere = ("hooli.example", "Hooli", "COO")
+
+    def person(job):
+        return Person(name="Sam Ito", title=job[2], employer_name=job[1],
+                      employer_domain=job[0], current_jobs=(job,) if jobs else ())
+
+    two = {"domain": "acme.test", "account_domain": "acme.example"}
+    assert _still_at(person(at), **two) == "yes"
+    # Someone genuinely elsewhere still reads as having moved.
+    assert _still_at(person(elsewhere), **two) == "no — now at Hooli, as COO"
+    # The domain met still counts, and no account domain changes nothing.
+    assert _still_at(person(at)) == "yes"
+    assert _still_at(person(elsewhere), account_domain="") == "no — now at Hooli, as COO"
+
+
+class _Lookups:
+    display_name = "Example"
+
+    def __init__(self, companies):
+        self.companies, self.calls = companies, []
+
+    def company_by_domain(self, domain):
+        self.calls.append(domain)
+        return self.companies.get(domain)
+
+
+def _coverage(**kw):
+    return [{"domain": "acme.test", "name": "Acme", "employees": 500, "hq": "US",
+             "meets": "yes", "assessed": True, **kw}]
+
+
+def test_the_company_lookup_falls_back_to_the_account_domain_once():
+    found = Company(name="Acme", domain="acme.example", employees=520, country="United States")
+
+    # Missed by the domain met, found by the account's: used, and said so.
+    p = _Lookups({"acme.example": found})
+    cov = _coverage(account_domain="acme.example")
+    enrichment.companies(enrichment.start(p), cov, PROFILE)
+    assert cov[0]["verdict_check"] == "agrees (looked up as acme.example)"
+    assert cov[0]["other_employees"] == 520
+    assert p.calls == ["acme.test", "acme.example"]
+
+    # Found by neither: not found, and exactly one extra lookup.
+    p = _Lookups({})
+    cov = _coverage(account_domain="acme.example")
+    enrichment.companies(enrichment.start(p), cov, PROFILE)
+    assert cov[0]["verdict_check"] == "not found in Example"
+    assert p.calls == ["acme.test", "acme.example"]
+
+    # No account domain, or the same one: no extra lookup.
+    for extra in ({}, {"account_domain": ""}, {"account_domain": "acme.test"}):
+        p = _Lookups({})
+        enrichment.companies(enrichment.start(p), _coverage(**extra), PROFILE)
+        assert p.calls == ["acme.test"]
+
+    # Found by the domain met: the account's is never asked.
+    p = _Lookups({"acme.test": found})
+    enrichment.companies(enrichment.start(p), _coverage(account_domain="acme.example"), PROFILE)
+    assert p.calls == ["acme.test"]
+
+
+class _ByEmailThenLinkedIn:
+    display_name = "Example"
+
+    def __init__(self, by_email, by_linkedin=None):
+        self.by_email, self.by_linkedin, self.linkedin_calls = by_email, by_linkedin, []
+
+    def person_by_email(self, email):
+        return self.by_email
+
+    def person_by_linkedin(self, url):
+        self.linkedin_calls.append(url)
+        return self.by_linkedin
+
+
+def _colleague():
+    return Person(name="Robin Hale", title="CRO", employer_name="Acme",
+                  employer_domain="acme.example")
+
+
+def test_an_email_match_under_another_name_is_not_used():
+    provider = _ByEmailThenLinkedIn(_colleague())
+    pass_ = enrichment.start(provider)
+    r = _row(linkedin="https://www.linkedin.com/in/sam-ito")
+    enrichment.stakeholders(pass_, [r])
+
+    # Not "yes" and not the colleague's title: as if the email found nothing.
+    assert r["still_at"] == "not found in Example"
+    assert r["other_title"] == "" and r["matched_on"] == ""
+    assert provider.linkedin_calls == ["https://www.linkedin.com/in/sam-ito"]
+    assert pass_.email_name_rejected == 1
+
+    queue = enrichment.review_queue(pass_, [], [r])
+    assert [(q["kind"], q["who"], q["linkedin"], q["crm"], q["other"], q["check"])
+            for q in queue] == [(
+        "CRM email may belong to someone else", "Sam Ito",
+        "https://www.linkedin.com/in/sam-ito", "sam@acme.example",
+        "record at that email is Robin Hale",
+        "Open their LinkedIn; the CRM email may be a colleague's",
+    )]
+
+
+def test_the_linkedin_fallback_can_still_find_the_right_person():
+    sam = Person(name="Sam Ito", title="COO", employer_name="Hooli",
+                 employer_domain="hooli.example")
+    provider = _ByEmailThenLinkedIn(_colleague(), sam)
+    r = _row(linkedin="https://www.linkedin.com/in/sam-ito")
+    enrichment.stakeholders(enrichment.start(provider), [r])
+
+    assert r["still_at"] == "no — now at Hooli, as COO (matched on LinkedIn)"
+    assert r["email_other_person"] == "Robin Hale"
+
+
+@pytest.mark.parametrize("name", ["Sam Q. Ito", "Sam Ito", ""])
+def test_an_email_match_that_agrees_or_has_no_name_is_accepted_as_before(name):
+    person = Person(name=name, title="VP Ops", employer_name="Acme",
+                    employer_domain="acme.example")
+    pass_ = enrichment.start(_OnePerson(person))
+    r = _row()
+    enrichment.stakeholders(pass_, [r])
+
+    assert r["still_at"] == "yes" and r["matched_on"] == "email"
+    assert "email_other_person" not in r and pass_.email_name_rejected == 0
+
+
+def test_the_account_website_becomes_a_bare_domain():
+    from quorum.crm.fieldmap import FieldMap
+    from quorum.crm.salesforce import Salesforce
+    from quorum.domains import bare_domain
+    from tests.conftest import crm_config
+
+    sf = Salesforce(crm_config(), FieldMap({}))
+    sent = []
+    sf.query = lambda soql: sent.append(soql) or {"records": [
+        {"Name": "Acme", "Website": "https://www.acme.example/about"}]}
+
+    assert sf.account_firmographics("001")["account_domain"] == "acme.example"
+    assert "Website" in sent[0]
+    sf.query = lambda soql: {"records": [{"Name": "Acme"}]}
+    assert sf.account_firmographics("001")["account_domain"] == ""
+
+    for raw, bare in [("HTTP://WWW.Acme.Example:8443/a?b=1#c", "acme.example"),
+                      ("acme.example.", "acme.example"), ("www.acme.example", "acme.example"),
+                      ("  ", ""), (None, "")]:
+        assert bare_domain(raw) == bare
+
+
+def test_with_hubspot_only_there_is_no_account_domain():
+    from quorum.crm.fieldmap import FieldMap
+    from quorum.crm.salesforce import Salesforce
+    from tests.conftest import crm_config
+
+    cfg = _cfg()
+    cfg.salesforce.configured, cfg.hubspot.configured = False, True
+    hs = _HS()
+    hs.configured = True
+    hs.count_domain = lambda d: 3
+    cov = coverage_mod.build_coverage(
+        cfg, people_mod.group_companies(_attendees()), PROFILE,
+        Salesforce(crm_config(False), FieldMap({})), hs,
+    )
+    assert cov and all(c["account_domain"] == "" for c in cov)

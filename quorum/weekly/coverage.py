@@ -175,6 +175,9 @@ def build_coverage(
                 "employees": firmo.get("employees", ""),
                 "hq": firmo.get("hq", ""),
                 "account_type": account_type,
+                # The account's Website domain, where Salesforce gave one. ""
+                # when unknown, and always "" with HubSpot only.
+                "account_domain": firmo.get("account_domain") or "",
                 "meets": "yes" if ok else (why or "no"),
                 # The customer gate applies to the ICP-fit count, not only to the
                 # shortlist — otherwise the triage number overcounts fit.
