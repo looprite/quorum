@@ -405,7 +405,8 @@ def review_queue(pass_: _Cached, coverage: list[dict], rows: list[dict]) -> list
     for r in rows:
         if r.get("linkedin_other_person"):
             add("CRM LinkedIn may be someone else", r.get("company", ""), r.get("name", ""),
-                r.get("linkedin") or "", f"profile at that URL is {r['linkedin_other_person']}",
+                # The URL is in the LinkedIn column; saying it again here adds nothing.
+                "", f"profile at that URL is {r['linkedin_other_person']}",
                 "Open the CRM's LinkedIn URL", linkedin=_crm_url(r))
         if r.get("email_other_person"):
             add("CRM email may belong to someone else", r.get("company", ""), r.get("name", ""),

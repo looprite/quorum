@@ -163,6 +163,30 @@ def _part(what, count, out_of) -> str:
     return text + (f" of {out_of}" if out_of not in (None, "") else "")
 
 
+def _lead_in_dropped(what: str, earlier: list[str]) -> str:
+    """"X, rest" shows "rest" when an earlier label in the tab is exactly X or
+    starts with "X, ". The longest such X wins, so "In your CRM, no title, and
+    no mobile" after "In your CRM, no title" reads "and no mobile"."""
+    cut = len(what)
+    while (cut := what.rfind(", ", 0, cut)) > 0:
+        lead = what[:cut]
+        if any(e == lead or e.startswith(lead + ", ") for e in earlier):
+            return what[cut + 2:]
+    return what
+
+
+def _parts(stats: list[tuple], shown: list[tuple]) -> list[str]:
+    """The line's parts: `shown` rows of the tab's `stats`, with a repeated
+    lead-in left off. "Earlier" is the sheet's own order and labels as the sheet
+    wrote them, hidden zero rows included; the sheet itself is not touched."""
+    labels = [s[0] for s in stats]
+    out = []
+    for row in shown:
+        i = next(k for k, s in enumerate(stats) if s is row)
+        out.append(_part(_lead_in_dropped(row[0], labels[:i]), row[1], row[2]))
+    return out
+
+
 def render_summary(ws, title: str, linkable: set[str]) -> str:
     """The Summary sheet as one line per tab, in sheet order. Every word is the
     sheet's own; nothing is recomputed. Zero counts are left out, and a tab
@@ -188,11 +212,11 @@ def render_summary(ws, title: str, linkable: set[str]) -> str:
             total = sum(int(s[1] or 0) for s in stats)
             # Largest first; sorted() is stable, so ties keep the sheet's order.
             shown = sorted(shown, key=lambda s: -int(s[1]))
-            parts = [_part(*s) for s in shown]
+            parts = _parts(stats, shown)
             lead = f"{total} to check" + (":" if parts else "")
             body = " ".join([lead, " · ".join(parts)]) if parts else lead
         else:
-            parts = [_part(*s) for s in (shown or stats[:1])]
+            parts = _parts(stats, shown or stats[:1])
             body = " · ".join(parts)
         name = html.escape(tab)
         link = f'<a href="#{anchor(tab)}">{name}</a>' if tab in linkable else name
@@ -215,6 +239,19 @@ def _table(headers: list[str], rows: list[list[str]]) -> str:
     )
 
 
+def _tr(headers: list[str], cols: list[str], vals: list[str]) -> str:
+    tds = []
+    for col in cols:
+        i = headers.index(col)
+        value = vals[i] if i < len(vals) else ""
+        klass, inner = cell(col, value)
+        # Dates, yes/no and counts stay on one line; prose wraps.
+        if len(value) <= 12:
+            klass = f"{klass} s".strip()
+        tds.append(f'<td class="{klass}">{inner}</td>' if klass else f"<td>{inner}</td>")
+    return f"<tr>{''.join(tds)}</tr>"
+
+
 def render_sheet(ws, title: str) -> str:
     rows = list(ws.iter_rows(values_only=True))
     if not rows:
@@ -222,7 +259,7 @@ def render_sheet(ws, title: str) -> str:
     headers = [h for h in rows[0] if h]
     group_col = GROUP_BY.get(title)
     people_col = PEOPLE_BADGE.get(title)
-    body: list[tuple[str, str]] = []  # (group, <tr>)
+    records: list[tuple[str, list[str]]] = []  # (group, cell values)
     people = 0
     notes: list[str] = []
 
@@ -234,36 +271,36 @@ def render_sheet(ws, title: str) -> str:
         if not any(vals[1:]):
             notes.append(vals[0])
             continue
-        shown = [h for h in headers if h != group_col]
-        tds = []
-        for col in shown:
-            i = headers.index(col)
-            value = vals[i] if i < len(vals) else ""
-            klass, inner = cell(col, value)
-            # Dates, yes/no and counts stay on one line; prose wraps.
-            if len(value) <= 12:
-                klass = f"{klass} s".strip()
-            tds.append(f'<td class="{klass}">{inner}</td>' if klass else f"<td>{inner}</td>")
         group = vals[headers.index(group_col)] if group_col else ""
-        body.append((group, f"<tr>{''.join(tds)}</tr>"))
+        records.append((group, vals))
         if people_col and not vals[headers.index(people_col)].startswith("—"):
             people += 1
 
     shown = [h for h in headers if h != group_col]
     sub = " ".join(html.escape(n) for n in notes)
     if group_col:
-        groups: dict[str, list[str]] = {}
-        for g, tr in body:
-            groups.setdefault(g, []).append(tr)
+        groups: dict[str, list[list[str]]] = {}
+        for g, vals in records:
+            groups.setdefault(g, []).append(vals)
+
+        def filled(col, group_rows):
+            i = headers.index(col)
+            return any(i < len(v) and v[i] for v in group_rows)
+
+        # A column that is empty in every row of a group says nothing there.
         content = "".join(
-            f'<h3>{html.escape(g)}<span class="cnt">{len(trs)}</span></h3>' + _table(shown, trs)
-            for g, trs in groups.items()
+            f'<h3>{html.escape(g)}<span class="cnt">{len(rs)}</span></h3>'
+            + _table(
+                cols := [c for c in shown if filled(c, rs)],
+                [_tr(headers, cols, v) for v in rs],
+            )
+            for g, rs in groups.items()
         )
     else:
-        content = _table(shown, [tr for _, tr in body])
+        content = _table(shown, [_tr(headers, shown, v) for _, v in records])
     return (
         f'<section id="{anchor(title)}"><h2>{html.escape(title)}'
-        f'<span class="cnt">{people if people_col else len(body)}</span></h2>'
+        f'<span class="cnt">{people if people_col else len(records)}</span></h2>'
         + (f'<p class="sub">{sub}</p>' if sub else "")
         + content
         + "</section>"

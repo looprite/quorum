@@ -363,7 +363,10 @@ def test_the_summary_counts_what_the_provider_found_and_the_queue(tmp_path):
         geo_label="North America", enrichment="Example", queue=queue, summary=stats,
     )
     html = open(view_mod.render(xlsx, "example.com")).read()
-    assert "Not in your CRM, and found by Example" in html
+    # The sheet keeps the full label; the page's line drops the words it just said.
+    assert any("Not in your CRM, and found by Example" in str(c.value)
+               for row in load_workbook(xlsx)["Summary"].iter_rows() for c in row)
+    assert "Not in your CRM 4 of 6 · and found by Example" in html
     assert "Enrichment: Example — its findings are on the Review queue tab." in html
 
 
@@ -1008,3 +1011,94 @@ def test_with_hubspot_only_there_is_no_account_domain():
         Salesforce(crm_config(False), FieldMap({})), hs,
     )
     assert cov and all(c["account_domain"] == "" for c in cov)
+
+
+# --- HTML tidy-ups ---------------------------------------------------------- #
+
+
+def _queue_sheet(rows):
+    from openpyxl import Workbook
+
+    ws = Workbook().active
+    ws.append(["What", "Company", "Person", "LinkedIn", "CRM says", "Example says", "Check"])
+    for r in rows:
+        ws.append(list(r))
+    return ws
+
+
+def test_a_group_drops_the_columns_that_are_empty_in_all_its_rows():
+    ws = _queue_sheet([
+        ("Profile fit disputed", "Globex", "", "", "10 employees", "150 employees", "Look"),
+        ("Profile fit disputed", "Initech", "", "", "20 employees", "90 employees", "Look"),
+        ("Title differs", "Acme", "Dana Reyes", "", "VP", "SVP", "Open"),
+        ("Title differs", "Acme", "Lee Park", "https://www.linkedin.com/in/lee-park",
+         "VP", "CMO", "Open"),
+    ])
+    out = view_mod.render_sheet(ws, "Review queue")
+    disputed, title = out.split("<h3>")[1:]
+
+    assert "<th>Person</th>" not in disputed and "<th>LinkedIn</th>" not in disputed
+    assert "<th>Company</th>" in disputed and "<th>CRM says</th>" in disputed
+    # One value is enough to keep a column, for every row of the group.
+    assert "<th>Person</th>" in title and "<th>LinkedIn</th>" in title
+    # Other sections keep their empty columns.
+    plain = view_mod.render_sheet(ws, "Company coverage")
+    assert "<th>Person</th>" in plain and "<th>LinkedIn</th>" in plain
+
+
+def test_the_someone_else_row_does_not_repeat_the_url(tmp_path):
+    wb, html, _ = _run(tmp_path, _Provider())
+    _, rows = _table(wb["4 - Review queue"])
+    wrong = next(r for r in rows if r["What"] == "CRM LinkedIn may be someone else")
+
+    assert wrong["CRM says"] in (None, "")
+    assert wrong["LinkedIn"] == "https://www.linkedin.com/in/kimlo"
+    assert "Kimberly Stone" in wrong["Example says"] and wrong["Check"]
+    group = html.split("<h3>CRM LinkedIn may be someone else")[1].split("<h3>")[0]
+    assert "<th>CRM says</th>" not in group and "<th>LinkedIn</th>" in group
+
+
+def _line(rows):
+    out = view_mod.render_summary(_summary_sheet(rows), "Summary", {"Met this week"})
+    return re.search(r"</b> ([^<]*)</div>", out).group(1)
+
+
+def test_summary_labels_drop_a_lead_in_an_earlier_label_already_said():
+    rows = [
+        ("Met this week", "In your CRM", 6, 8),
+        ("Met this week", "In your CRM, no title", 2, 6),
+        ("Met this week", "In your CRM, no LinkedIn", 1, 6),
+        ("Met this week", "In your CRM, no mobile", 3, 6),
+    ]
+    assert _line(rows) == "In your CRM 6 of 8 · no title 2 of 6 · no LinkedIn 1 of 6 · no mobile 3 of 6"
+
+    # A hidden zero row still counts as an earlier label, and the sheet's own
+    # order is what "earlier" means.
+    for hidden in (1, 2):
+        zeroed = [r if i != hidden else (*r[:2], 0, r[3]) for i, r in enumerate(rows)]
+        text = _line(zeroed)
+        assert text.startswith("In your CRM 6 of 8 · ")
+        assert text.endswith("no mobile 3 of 6") and "In your CRM," not in text
+    # Even with the plain label itself hidden: the others share its lead-in.
+    assert "In your CRM," not in _line([(*rows[0][:2], 0, 8), *rows[1:]])
+
+
+def test_summary_labels_keep_words_nothing_earlier_said():
+    rows = [
+        ("Met this week", "In your CRM", 6, 8),
+        # Not followed by ", ": kept whole.
+        ("Met this week", "In your CRM and found", 3, None),
+        # Nothing earlier is exactly "People" or starts with "People, ".
+        ("Met this week", "People, in all", 4, None),
+        # The longest lead-in an earlier label supplies wins.
+        ("Met this week", "In your CRM, no title", 2, 6),
+        ("Met this week", "In your CRM, no title, and no mobile", 1, 6),
+    ]
+    assert _line(rows) == (
+        "In your CRM 6 of 8 · In your CRM and found 3 · People, in all 4 · "
+        "no title 2 of 6 · and no mobile 1 of 6"
+    )
+    # The sheet keeps its labels.
+    ws = _summary_sheet(rows)
+    view_mod.render_summary(ws, "Summary", set())
+    assert ws["B6"].value == "In your CRM, no title, and no mobile"
