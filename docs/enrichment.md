@@ -186,7 +186,7 @@ company your CRM rejects and the provider would accept is put on tab 3 as
 
 | Column | Values |
 |---|---|
-| `Still at company?` | `yes` · `no — now at <company>` · `unclear — no current employer in LeadIQ` · `not found in LeadIQ`, with `(matched on LinkedIn)` added where the match came from the CRM's LinkedIn URL |
+| `Still at company?` | `yes` · `no — now at <company>, as <title>` (just `no — now at <company>` when the provider has no title) · `unclear — no current employer in LeadIQ` · `not found in LeadIQ`, with `(matched on LinkedIn)` added where the match came from the CRM's LinkedIn URL |
 | `Title (LeadIQ)` | Filled **only where it differs** from the CRM's title — and left blank for someone who has moved, whose provider title is for a different job |
 | `LinkedIn (LeadIQ)` | Filled **only where it differs** from the CRM's URL |
 
@@ -209,9 +209,16 @@ is the domain met. A script filtering this tab by domain will report a row
 missing that is present under the account's name. Match on both, or read the
 domain from Company coverage.
 
+A person's row carries the CRM's LinkedIn URL in its own `LinkedIn` column, so
+the profile is one click from the row; **LinkedIn differs** keeps both URLs in
+its CRM and provider columns, and company rows leave it blank. The workbook tab
+is one table in the order below. The HTML page shows the same rows under one
+sub-heading per kind, with its count.
+
 | What | When |
 |---|---|
 | Profile fit disputed | The two sources give different ICP answers |
+| Company not found in `<provider>` | Your CRM has both the employee count and the HQ, and the provider has no record of the company, so those numbers get no second opinion |
 | Headcount or HQ missing | Either source lacks the employee count or HQ the ICP test needs |
 | May have left | The provider places the person at a different company |
 | CRM LinkedIn may be someone else | The CRM's LinkedIn URL leads to a profile under a different name |
@@ -219,10 +226,15 @@ domain from Company coverage.
 | Title differs | The provider's title differs from the CRM's |
 | LinkedIn differs | The provider's LinkedIn URL differs from the CRM's |
 
-**Account linking** is the one no lookup fixes. The map reaches a CRM account
-through its Website field, so one wrong value there pulls another company's
-contacts in under it. Only someone correcting the account in the CRM can fix
-that; the queue says where to look.
+**Account linking** is the one no lookup fixes. With Salesforce, the map
+reaches a CRM account through the company's contacts: the account a contact at
+that email domain is filed under (the first one found; the order is not
+defined). One contact filed under the wrong account can pull that account's
+details in for the whole company, and contacts split across two accounts can
+land on either. HubSpot is not asked for an account at all: it contributes a
+count of contacts at the domain and nothing about the company. Only someone
+correcting the contact's or the account's record can fix this; the queue says
+where to look.
 
 **The Summary tab** gains two things: how many of the people not in your CRM
 the provider found, out of those it looked up (shared inboxes are not), and

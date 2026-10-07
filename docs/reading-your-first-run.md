@@ -103,10 +103,13 @@ see what was removed.
 - **People appearing twice under different addresses.** Someone who changed
   email address can split into two people, which also makes a recent contact
   read as "no".
-- **Another company's people listed under an account.** The map reaches a CRM
-  account through its Website field, so one wrong value there pulls another
-  company's contacts in under it. Nothing in the run can fix that; someone
-  correcting the account in the CRM can.
+- **Another company's people listed under an account.** With Salesforce, the map
+  reaches a CRM account through the company's contacts: the account a contact
+  at that email domain is filed under. One contact filed under the wrong
+  account can pull that account's details in for the whole company, and
+  contacts split across two accounts can land on either. (HubSpot gives no
+  account, only a contact count.) Nothing in the run can fix that; someone
+  correcting the contact's or the account's record in the CRM can.
 
 ## What to do with each kind of gap
 

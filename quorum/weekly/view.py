@@ -34,8 +34,10 @@ CSS = """
 h1{font-size:20px;margin:0 0 4px} .meta{color:#777;font-size:13px;margin-bottom:22px}
 section{margin:0 0 32px} h2{font-size:16px;margin:0 0 2px} .cnt{display:inline-block;background:#2F5B7C;color:#fff;border-radius:10px;padding:1px 9px;font-size:12px;margin-left:6px}
 .sub{color:#777;font-size:12px;margin:2px 0 9px} .foot{color:#999;font-size:11.5px;font-style:italic;margin-top:6px}
-table{border-collapse:collapse;width:100%;font-size:12.5px} th{background:#2F5B7C;color:#fff;text-align:left;padding:6px 8px}
-td{padding:4px 8px;border-bottom:1px solid #e4e4e4;vertical-align:top;max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tw{overflow-x:auto} h3{font-size:14px;margin:16px 0 4px}
+table{border-collapse:collapse;width:100%;min-width:560px;font-size:12.5px} th{background:#2F5B7C;color:#fff;text-align:left;padding:6px 8px}
+td{padding:4px 8px;border-bottom:1px solid #e4e4e4;vertical-align:top;overflow-wrap:anywhere}
+td.s{white-space:nowrap} .sl{margin:3px 0}
 @media(prefers-color-scheme:dark){td{border-bottom:1px solid #2a2a2a}}
 .no{color:#c0392b;font-weight:700} .fl{color:#8a6d00;background:#f7e8a0;border-radius:6px;padding:0 6px;font-size:11px}
 td.ok{background:#1e8e3e;color:#fff;font-weight:700;text-align:center} td.rej{color:#b06000;font-size:11px}
@@ -139,12 +141,89 @@ def cell(col: str, value: str) -> tuple[str, str]:
     return "", v
 
 
+# Sections the page splits into one sub-heading per value of a column, in the
+# order the sheet already has them. The workbook keeps one table; this is only
+# how the page reads it.
+GROUP_BY = {"Review queue": "What"}
+
+# Sections whose badge counts people, so the page agrees with the Summary tab's
+# "People on the list": a placeholder row is not a person.
+PEOPLE_BADGE = {"Stakeholder list": "Name"}
+
+QUEUE_TAB = "Review queue"
+
+
+def anchor(title: str) -> str:
+    """The id a section carries, and a Summary line links to."""
+    return re.sub(r"[^a-z0-9]+", "-", title.lower()).strip("-")
+
+
+def _part(what, count, out_of) -> str:
+    text = f"{what} {count}"
+    return text + (f" of {out_of}" if out_of not in (None, "") else "")
+
+
+def render_summary(ws, title: str, linkable: set[str]) -> str:
+    """The Summary sheet as one line per tab, in sheet order. Every word is the
+    sheet's own; nothing is recomputed. Zero counts are left out, and a tab
+    whose counts are all zero keeps one line so it is not mistaken for missing."""
+    rows = list(ws.iter_rows(values_only=True))
+    tabs: dict[str, list[tuple]] = {}
+    notes: list[str] = []
+    for r in rows[1:]:
+        vals = ["" if v is None else v for v in r]
+        if not any(str(v) for v in vals):
+            continue
+        # Footnote rows sit in column A with the rest blank.
+        if not any(str(v) for v in vals[1:]):
+            notes.append(str(vals[0]))
+            continue
+        tab, what, count, out_of = (list(vals) + ["", "", "", ""])[:4]
+        tabs.setdefault(str(tab), []).append((str(what), count, out_of))
+
+    lines = []
+    for tab, stats in tabs.items():
+        shown = [s for s in stats if s[1] not in (0, "0")]
+        if tab == QUEUE_TAB:
+            total = sum(int(s[1] or 0) for s in stats)
+            # Largest first; sorted() is stable, so ties keep the sheet's order.
+            shown = sorted(shown, key=lambda s: -int(s[1]))
+            parts = [_part(*s) for s in shown]
+            lead = f"{total} to check" + (":" if parts else "")
+            body = " ".join([lead, " · ".join(parts)]) if parts else lead
+        else:
+            parts = [_part(*s) for s in (shown or stats[:1])]
+            body = " · ".join(parts)
+        name = html.escape(tab)
+        link = f'<a href="#{anchor(tab)}">{name}</a>' if tab in linkable else name
+        lines.append(f'<div class="sl"><b>{link}</b> {html.escape(body)}</div>')
+
+    sub = " ".join(html.escape(n) for n in notes)
+    return (
+        f'<section id="{anchor(title)}"><h2>{html.escape(title)}</h2>'
+        + "".join(lines)
+        + (f'<p class="sub">{sub}</p>' if sub else "")
+        + "</section>"
+    )
+
+
+def _table(headers: list[str], rows: list[list[str]]) -> str:
+    th = "".join(f"<th>{html.escape(h)}</th>" for h in headers)
+    return (
+        f'<div class="tw"><table><thead><tr>{th}</tr></thead>'
+        f"<tbody>{''.join(rows)}</tbody></table></div>"
+    )
+
+
 def render_sheet(ws, title: str) -> str:
     rows = list(ws.iter_rows(values_only=True))
     if not rows:
         return ""
     headers = [h for h in rows[0] if h]
-    body: list[str] = []
+    group_col = GROUP_BY.get(title)
+    people_col = PEOPLE_BADGE.get(title)
+    body: list[tuple[str, str]] = []  # (group, <tr>)
+    people = 0
     notes: list[str] = []
 
     for r in rows[1:]:
@@ -155,19 +234,39 @@ def render_sheet(ws, title: str) -> str:
         if not any(vals[1:]):
             notes.append(vals[0])
             continue
+        shown = [h for h in headers if h != group_col]
         tds = []
-        for i, col in enumerate(headers):
-            klass, inner = cell(col, vals[i] if i < len(vals) else "")
+        for col in shown:
+            i = headers.index(col)
+            value = vals[i] if i < len(vals) else ""
+            klass, inner = cell(col, value)
+            # Dates, yes/no and counts stay on one line; prose wraps.
+            if len(value) <= 12:
+                klass = f"{klass} s".strip()
             tds.append(f'<td class="{klass}">{inner}</td>' if klass else f"<td>{inner}</td>")
-        body.append(f"<tr>{''.join(tds)}</tr>")
+        group = vals[headers.index(group_col)] if group_col else ""
+        body.append((group, f"<tr>{''.join(tds)}</tr>"))
+        if people_col and not vals[headers.index(people_col)].startswith("—"):
+            people += 1
 
-    th = "".join(f"<th>{html.escape(h)}</th>" for h in headers)
+    shown = [h for h in headers if h != group_col]
     sub = " ".join(html.escape(n) for n in notes)
+    if group_col:
+        groups: dict[str, list[str]] = {}
+        for g, tr in body:
+            groups.setdefault(g, []).append(tr)
+        content = "".join(
+            f'<h3>{html.escape(g)}<span class="cnt">{len(trs)}</span></h3>' + _table(shown, trs)
+            for g, trs in groups.items()
+        )
+    else:
+        content = _table(shown, [tr for _, tr in body])
     return (
-        f'<section><h2>{html.escape(title)}<span class="cnt">{len(body)}</span></h2>'
+        f'<section id="{anchor(title)}"><h2>{html.escape(title)}'
+        f'<span class="cnt">{people if people_col else len(body)}</span></h2>'
         + (f'<p class="sub">{sub}</p>' if sub else "")
-        + f"<table><thead><tr>{th}</tr></thead>"
-        f"<tbody>{''.join(body)}</tbody></table></section>"
+        + content
+        + "</section>"
     )
 
 
@@ -176,8 +275,12 @@ def render(workbook_path: str, account: str) -> str:
     week = match.group(1) if match else "?"
     wb = load_workbook(workbook_path)
 
+    present = [(name, title) for name, title in SECTIONS if name in wb.sheetnames]
+    linkable = {title for _, title in present}
     parts = [
-        render_sheet(wb[name], title) for name, title in SECTIONS if name in wb.sheetnames
+        render_summary(wb[name], title, linkable) if name == "Summary"
+        else render_sheet(wb[name], title)
+        for name, title in present
     ]
 
     label = html.escape(account)

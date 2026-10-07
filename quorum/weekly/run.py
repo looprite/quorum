@@ -281,7 +281,7 @@ def run_weekly(cfg: Config, log=print) -> dict:
         cfg, reconciled, coverage, stakeholders, bench_raw, profile,
         enrichment=provider.display_name if provider else None,
         queue=queue,
-        queue_kinds=enrichment_mod.QUEUE_ORDER,
+        queue_kinds=enrichment_mod.queue_kinds(provider) if provider else (),
     )
     xlsx_path = os.path.join(cfg.output_dir, f"weekly_stakeholder_map_{week}.xlsx")
     workbook_mod.build_workbook(

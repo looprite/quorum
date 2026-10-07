@@ -127,10 +127,14 @@ def company_mismatch(domain: Optional[str], crm_company: Optional[str]) -> bool:
     through?
 
     Read by the review queue (tab 4, `weekly/enrichment.py`) and nowhere else —
-    as a question for a person, never as a Flag value. The map reaches an account
-    through its Website field, so one wrong value there pulls another company's
-    contacts in under it; no lookup fixes that, only someone correcting the
-    account does. A heuristic, so it asks rather than asserts.
+    as a question for a person, never as a Flag value. With Salesforce the map
+    reaches an account through the company's contacts: it takes the account of
+    the first contact it finds at that email domain (unordered, 50 at most). One
+    contact filed under the wrong account can pull that account's details in
+    for the whole company, and contacts split across two accounts can land on
+    either; no lookup fixes that, only someone correcting the contact's or the
+    account's record does. HubSpot is not asked for an account at all. A
+    heuristic, so it asks rather than asserts.
     """
     if not domain or not crm_company:
         return False

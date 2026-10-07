@@ -338,10 +338,13 @@ def build_workbook(
         ws_queue = _sheet(
             wb,
             "4 - Review queue",
-            ["What", "Company", "Person", "CRM says", f"{other} says", "Check"],
+            ["What", "Company", "Person", "LinkedIn", "CRM says", f"{other} says", "Check"],
         )
         for q in queue or []:
-            ws_queue.append([q["kind"], q["company"], q["who"], q["crm"], q["other"], q["check"]])
+            ws_queue.append(
+                [q["kind"], q["company"], q["who"], q.get("linkedin", ""), q["crm"],
+                 q["other"], q["check"]]
+            )
         ws_queue.append([])
         ws_queue.append(
             [

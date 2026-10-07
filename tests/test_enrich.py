@@ -12,6 +12,7 @@ live credential in a traceback. Stubs throughout.
 from __future__ import annotations
 
 import json
+import re
 from types import SimpleNamespace
 
 import pytest
@@ -280,11 +281,11 @@ def test_still_at_company_and_differences(tmp_path):
     assert headers[-3:] == ["Still at company?", "Title (Example)", "LinkedIn (Example)"]
     # Acme is among Dana's current positions, though not listed first.
     assert by["Dana Reyes"]["Still at company?"] == "yes"
-    assert by["Lee Park"]["Still at company?"] == "no — now at Globex"
+    assert by["Lee Park"]["Still at company?"] == "no — now at Globex, as CMO"
     # Kim's CRM LinkedIn URL points at someone else: not used, still not found.
     assert by["Kim Lo"]["Still at company?"] == "not found in Example"
     # Ray's email found nothing; his LinkedIn URL did, and the name agrees.
-    assert by["Ray Oh"]["Still at company?"] == "no — now at Hooli (matched on LinkedIn)"
+    assert by["Ray Oh"]["Still at company?"] == "no — now at Hooli, as COO (matched on LinkedIn)"
     # Shown only where it differs — and it is the title at *this* company, not
     # the first one listed. The CRM's title stays in Title.
     assert by["Dana Reyes"]["Title (Example)"] == "SVP Sales"
@@ -341,14 +342,19 @@ def test_the_summary_counts_what_the_provider_found_and_the_queue(tmp_path):
 
     stats = summary_mod.build(
         cfg, reconciled, coverage, rows, raw, PROFILE, enrichment="Example",
-        queue=queue, queue_kinds=enrichment.QUEUE_ORDER,
+        queue=queue, queue_kinds=enrichment.queue_kinds(_Provider()),
     )
     by = {s["key"]: (s["count"], s["out_of"]) for s in stats}
 
     assert by["people_not_in_crm"] == (4, 6)
     assert by["people_not_in_crm_found"] == (1, 3)
     kinds = [s["key"][len("queue:"):] for s in stats if s["key"].startswith("queue:")]
+    # The key is stable; only the label names the provider.
     assert kinds[: len(enrichment.QUEUE_ORDER)] == list(enrichment.QUEUE_ORDER)
+    assert kinds[:2] == ["Profile fit disputed", "Company not found"]
+    assert next(s["what"] for s in stats if s["key"] == "queue:Company not found") == (
+        "Company not found in Example"
+    )
     assert sum(s["count"] for s in stats if s["key"].startswith("queue:")) == len(queue)
 
     xlsx = str(tmp_path / "weekly_stakeholder_map_2026-08-17.xlsx")
@@ -412,20 +418,36 @@ def test_the_review_queue_holds_what_a_person_should_settle(tmp_path):
     wb, html, _ = _run(tmp_path, _Provider())
     headers, rows = _table(wb["4 - Review queue"])
 
-    assert headers == ["What", "Company", "Person", "CRM says", "Example says", "Check"]
+    assert headers == ["What", "Company", "Person", "LinkedIn", "CRM says", "Example says",
+                       "Check"]
     kinds = [r["What"] for r in rows]
     # Most consequential first: a disputed verdict can hide a whole company.
     assert kinds[0] == "Profile fit disputed"
     assert "May have left" in kinds
     assert "Title differs" in kinds
-    assert "Headcount or HQ missing" in kinds          # the provider had nothing
+    # The CRM holds both values and the provider has no record of the company:
+    # nothing is missing, there is just no second opinion.
+    assert "Company not found in Example" in kinds
+    assert "Headcount or HQ missing" not in kinds
+    assert kinds.index("Company not found in Example") > kinds.index("Profile fit disputed")
+    initech = next(r for r in rows if r["What"] == "Company not found in Example")
+    assert initech["Company"] == "Initech" and initech["LinkedIn"] in (None, "")
+    assert "the only second opinion" in initech["Check"]
     moved = next(r for r in rows if r["What"] == "May have left" and r["Person"] == "Lee Park")
-    assert moved["Example says"].startswith("now at Globex")
+    assert moved["Example says"].startswith("now at Globex, as CMO")
     ray = next(r for r in rows if r["What"] == "May have left" and r["Person"] == "Ray Oh")
     assert "(matched on LinkedIn)" in ray["Example says"]
+    # Each person row carries the CRM's LinkedIn URL, and the Check says so.
+    assert ray["LinkedIn"] == "https://linkedin.com/in/ray-oh/"
+    assert moved["LinkedIn"] in (None, "")                  # the CRM holds none for Lee
+    assert moved["Check"] == "Open their LinkedIn (link in this row)"
+    title_row = next(r for r in rows if r["What"] == "Title differs")
+    assert title_row["LinkedIn"] == "https://www.linkedin.com/in/dana-reyes"
+    assert title_row["Check"] == "Open their LinkedIn (link in this row)"
     # A handle match under another name becomes a question, not a finding.
     wrong = next(r for r in rows if r["What"] == "CRM LinkedIn may be someone else")
     assert wrong["Person"] == "Kim Lo" and "Kimberly Stone" in wrong["Example says"]
+    assert wrong["LinkedIn"] == "https://www.linkedin.com/in/kimlo"
     # The move is the finding; a title at the new company is not a disagreement.
     assert not any(r["What"] == "Title differs" and r["Person"] == "Lee Park" for r in rows)
     # Every row says where to check.
@@ -433,7 +455,7 @@ def test_the_review_queue_holds_what_a_person_should_settle(tmp_path):
 
     assert "Review queue" in html
     assert '<span class="fl">disputed — Example says yes</span>' in html
-    assert '<span class="fl">no — now at Globex</span>' in html
+    assert '<span class="fl">no — now at Globex, as CMO</span>' in html
 
 
 def test_one_crm_with_a_provider_still_compares_no_two_crms(tmp_path):
@@ -652,3 +674,154 @@ def test_the_stakeholder_list_says_how_it_is_built(tmp_path):
     assert "most senior first, then most recently contacted" in rule
     assert "People not in your CRM cannot appear here" in rule
     assert rule in html
+
+
+# --- the move text, queue readability, and what the page claims -------------- #
+
+
+def _mover(title):
+    return Person(name="Sam Ito", title=title, employer_name="Hooli",
+                  employer_domain="hooli.example",
+                  current_jobs=(("hooli.example", "Hooli", title),))
+
+
+class _OnePerson:
+    display_name = "Example"
+
+    def __init__(self, person):
+        self.person = person
+
+    def person_by_email(self, email):
+        return self.person
+
+
+@pytest.mark.parametrize(
+    "title,expected",
+    [("COO", "no — now at Hooli, as COO"), ("", "no — now at Hooli")],
+)
+def test_a_leavers_new_title_is_in_the_move_text_when_there_is_one(title, expected):
+    row = {"name": "Sam Ito", "_email": "sam@acme.example", "domain": "acme.example",
+           "company": "Acme", "title": "VP Ops"}
+    enrichment.stakeholders(enrichment.start(_OnePerson(_mover(title))), [row])
+
+    assert row["still_at"] == expected
+    # The separate provider-title column stays blank for a mover.
+    assert row["other_title"] == ""
+    # The queue's "May have left" row reads it from `still_at`.
+    queue = enrichment.review_queue(enrichment.start(_OnePerson(None)), [], [row])
+    left = next(q for q in queue if q["kind"] == "May have left")
+    assert left["other"] == expected[len("no — "):]
+
+
+def test_a_company_the_crm_has_in_full_is_not_called_missing():
+    """Missing is a gap in the CRM's data. A provider that does not know the
+    company is a different finding, and the queue says so."""
+    pass_ = enrichment.start(_OnePerson(None))
+    nf = enrichment.not_found(pass_.provider)
+    base = {"name": "Initech", "domain": "initech.example", "assessed": True,
+            "disputed": False, "other_missing": True, "verdict_check": nf,
+            "other_employees": None, "other_hq": ""}
+    full = {**base, "employees": 300, "hq": "Canada", "meets": "yes"}
+    gap = {**base, "domain": "umbrella.example", "name": "Umbrella", "employees": "",
+           "hq": "Canada", "meets": "no size"}
+    queue = enrichment.review_queue(pass_, [full, gap], [])
+
+    assert [(q["kind"], q["company"]) for q in queue] == [
+        ("Company not found in Example", "Initech"),
+        ("Headcount or HQ missing", "Umbrella"),
+    ]
+
+
+def test_the_page_groups_the_queue_by_kind_and_the_sheet_does_not(tmp_path):
+    wb, html, _ = _run(tmp_path, _Provider())
+    _, rows = _table(wb["4 - Review queue"])
+    section = html.split("<h2>Review queue", 1)[1].split("</section>", 1)[0]
+
+    for kind in {r["What"] for r in rows}:
+        n = sum(1 for r in rows if r["What"] == kind)
+        assert f'<h3>{kind}<span class="cnt">{n}</span></h3>' in section
+    # The kind is the sub-heading, so the column is dropped inside a group.
+    assert "<th>What</th>" not in section and "<th>LinkedIn</th>" in section
+    # The badge is the total, and the sheet stays one table.
+    assert section.startswith(f'<span class="cnt">{len(rows)}</span>')
+    assert [r["What"] for r in rows][0] == "Profile fit disputed"
+
+
+def test_the_stakeholder_badge_counts_people_not_placeholders():
+    from openpyxl import Workbook
+
+    from quorum.weekly.stakeholders import NO_SENIOR_CONTACT
+
+    ws = Workbook().active
+    ws.append(["Company", "Name", "Title"])
+    ws.append(["Acme", "Dana Reyes", "VP Sales"])
+    ws.append(["Acme", "Lee Park", "VP Marketing"])
+    ws.append(["Globex", NO_SENIOR_CONTACT, ""])
+    ws.append(["Globex", "Kim Lo", "CRO"])
+
+    html = view_mod.render_sheet(ws, "Stakeholder list")
+    assert '<span class="cnt">3</span>' in html and html.count("<tr>") == 5
+
+
+def test_the_page_wraps_cells_and_scrolls_tables_not_itself(tmp_path):
+    _, html, _ = _run(tmp_path, _Provider())
+
+    assert "text-overflow" not in html and "max-width:240px" not in html
+    assert ".tw{overflow-x:auto}" in html
+    assert html.count('<div class="tw"><table>') == html.count("<table>")
+
+
+def _summary_sheet(rows):
+    from openpyxl import Workbook
+
+    ws = Workbook().active
+    ws.append(["Tab", "What", "Count", "Out of"])
+    for r in rows:
+        ws.append(list(r))
+    ws.append([])
+    ws.append(["A footnote."])
+    return ws
+
+
+def test_the_summary_is_one_line_per_tab():
+    ws = _summary_sheet([
+        ("Company coverage", "Companies met", 8, None),
+        ("Company coverage", "Meet your profile", 5, 8),
+        ("Company coverage", "Could not be assessed", 0, 8),
+        ("Met this week", "People", 20, None),
+        ("Stakeholder list", "No title", 0, 12),
+        ("Stakeholder list", "No mobile", 0, 12),
+        ("Review queue", "Profile fit disputed", 0, None),
+        ("Review queue", "May have left", 2, None),
+        ("Review queue", "Title differs", 5, None),
+        ("Review queue", "LinkedIn differs", 2, None),
+    ])
+    linkable = {"Company coverage", "Met this week", "Review queue"}
+    out = view_mod.render_summary(ws, "Summary", linkable)
+    text = dict(re.findall(r"<b>(?:<a[^>]*>)?([^<]+)(?:</a>)?</b> ([^<]*)</div>", out))
+
+    # Every tab is present, and only the sheet's own words are used.
+    assert list(text) == ["Company coverage", "Met this week", "Stakeholder list",
+                          "Review queue"]
+    # Zero rows are dropped; "of" appears only where Out of is set.
+    assert text["Company coverage"] == "Companies met 8 · Meet your profile 5 of 8"
+    assert "Could not be assessed" not in out
+    assert text["Met this week"] == "People 20"
+    # A tab that is all zero keeps one line, so it is not read as missing.
+    assert text["Stakeholder list"] == "No title 0 of 12"
+    assert "No mobile" not in out
+    # The queue: the total, then the non-zero kinds, largest first, ties in
+    # queue order.
+    assert text["Review queue"] == (
+        "9 to check: Title differs 5 · May have left 2 · LinkedIn differs 2"
+    )
+    assert "Profile fit disputed" not in out
+    # Each tab name is a bold link to its section; the footnote stays.
+    assert '<b><a href="#review-queue">Review queue</a></b>' in out
+    assert '<b>Stakeholder list</b>' in out          # no such section: not a link
+    assert out.rstrip().endswith('<p class="sub">A footnote.</p></section>')
+
+
+def test_the_page_links_each_summary_tab_to_its_section(tmp_path):
+    html = _run(tmp_path, _Provider())[1]  # no Summary sheet in this run
+    assert 'id="review-queue"' in html and 'id="stakeholder-list"' in html

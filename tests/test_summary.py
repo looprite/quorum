@@ -76,7 +76,9 @@ def test_every_count_comes_with_what_it_is_out_of():
         _cfg(), RECONCILED, COVERAGE, STAKEHOLDERS, BENCH_RAW, PROFILE,
         enrichment="Example",
         queue=[{"kind": "May have left"}],
-        queue_kinds=("Profile fit disputed", "May have left"),
+        queue_kinds=(("Profile fit disputed", "Profile fit disputed"),
+                     ("Company not found", "Company not found in Example"),
+                     ("May have left", "May have left")),
     )
 
     assert _by_key(stats) == {
@@ -96,6 +98,8 @@ def test_every_count_comes_with_what_it_is_out_of():
         "stakeholders_no_mobile": (1, 2),
         # Zeros stay, so a kind going to zero week on week can be seen.
         "queue:Profile fit disputed": (0, None),
+        # The key does not carry the provider's name; the label does.
+        "queue:Company not found": (0, None),
         "queue:May have left": (1, None),
     }
     # The recent-contact line states the profile's own terms.

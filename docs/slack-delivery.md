@@ -147,7 +147,7 @@ def summary_lines(manifest: dict) -> list[str]:
     not_in_crm = count("people_not_in_crm")
 
     lines = [
-        line("Map", [
+        line("Company coverage", [
             f"{fit['count']} of {fit['out_of']} companies met fit your profile"
             if fit else f"{count('companies_met')} companies met",
             nonzero("companies_not_assessed", "could not be assessed"),
@@ -170,7 +170,11 @@ def summary_lines(manifest: dict) -> list[str]:
         ]),
     ]
 
-    queue = [(s["what"], s["count"]) for s in data["stats"] if s["key"].startswith("queue:")]
+    # Largest first; a tie keeps the queue's own order, which sorted() preserves.
+    queue = sorted(
+        ((s["what"], s["count"]) for s in data["stats"] if s["key"].startswith("queue:")),
+        key=lambda kn: -kn[1],
+    )
     if provider:
         total = sum(n for _, n in queue)
         lines.append(

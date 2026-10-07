@@ -44,7 +44,7 @@ def build(
     profile: dict,
     enrichment: Optional[str] = None,
     queue: Optional[list[dict]] = None,
-    queue_kinds: tuple[str, ...] = (),
+    queue_kinds: tuple[tuple[str, str], ...] = (),
 ) -> list[dict]:
     """-> the stats, in the order the Summary tab shows them."""
     crm_on = cfg.salesforce.configured or cfg.hubspot.configured
@@ -163,12 +163,16 @@ def build(
     # --- Review queue ---------------------------------------------------- #
     if other:
         area = "Review queue"
-        counts: dict[str, int] = {k: 0 for k in queue_kinds}
+        # (key, label): the key is stable, the label is what a reader sees.
+        labels = dict(queue_kinds)
+        counts: dict[str, int] = {k: 0 for k in labels}
         for q in queue or []:
-            counts[q["kind"]] = counts.get(q["kind"], 0) + 1
+            key = next((k for k, lab in queue_kinds if lab == q["kind"]), q["kind"])
+            labels.setdefault(key, q["kind"])
+            counts[key] = counts.get(key, 0) + 1
         # Zeros stay: week to week, a kind going to zero is the thing to see.
-        for kind, n in counts.items():
-            stats.append(_stat(area, "queue:" + kind, kind, n))
+        for key, n in counts.items():
+            stats.append(_stat(area, "queue:" + key, labels[key], n))
 
     return stats
 

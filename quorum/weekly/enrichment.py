@@ -26,6 +26,7 @@ import re
 import unicodedata
 from typing import Optional
 
+from ..crm.fieldmap import NOT_AVAILABLE, NOT_CHECKED
 from ..enrich import Withheld, linkedin_handle
 from .coverage import meets_profile
 from .people import company_mismatch, missing_from_crm
@@ -33,6 +34,7 @@ from .stakeholders import ICP_NOT_ASSESSED, NO_SENIOR_CONTACT
 
 AGREES = "agrees"
 MATCHED_ON_LINKEDIN = "(matched on LinkedIn)"
+CHECK_THEIR_LINKEDIN = "Open their LinkedIn (link in this row)"
 
 
 def not_found(provider) -> str:
@@ -118,6 +120,14 @@ def check_withheld(pass_: _Cached) -> None:
             + (f" (codes: {', '.join(sorted(pass_.withheld_codes))})" if pass_.withheld_codes else "")
             + " — treating that as the provider not answering, not as nobody found."
         )
+
+
+def _crm_url(r: dict) -> str:
+    """The CRM's LinkedIn URL for a row, or "". The stakeholder list holds
+    "not available in this CRM" in that field when the CRM has no such column;
+    that is a statement, not a link."""
+    value = r.get("linkedin") or ""
+    return "" if value in (NOT_AVAILABLE, NOT_CHECKED) else value
 
 
 def _norm(text: str) -> str:
@@ -239,10 +249,14 @@ def stakeholders(pass_: _Cached, rows: list[dict]) -> None:
             title_here = ""
         else:
             first = next(j for j in jobs if j[0])
-            r["still_at"] = f"no — now at {first[1] or first[0]}" + suffix
+            now_at = first[1] or first[0]
+            r["still_at"] = (
+                f"no — now at {now_at}" + (f", as {first[2]}" if first[2] else "") + suffix
+            )
             # Someone who has moved holds a title somewhere else. Setting it
             # beside the CRM's would read as a disagreement about this job; the
-            # move is the finding, and it is already stated.
+            # move is the finding, so the provider-title column stays blank.
+            # The new title now goes in the move text above.
             title_here = ""
         r["other_updated"] = p.updated
         r["other_title"] = (
@@ -280,8 +294,14 @@ def not_in_crm(pass_: _Cached, reconciled: list[dict]) -> None:
 
 # --- tab 4: the review queue ---------------------------------------------- #
 
+# The kinds, by stable key. One of them names the provider in its label (the
+# What text and the page's heading), but never in its key, so the summary's
+# `queue:` key does not change with the provider; `queue_kinds()` pairs them.
+COMPANY_NOT_FOUND = "Company not found"
+
 QUEUE_ORDER = (
     "Profile fit disputed",
+    COMPANY_NOT_FOUND,
     "Headcount or HQ missing",
     "May have left",
     "CRM LinkedIn may be someone else",
@@ -289,6 +309,16 @@ QUEUE_ORDER = (
     "Title differs",
     "LinkedIn differs",
 )
+
+
+def queue_label(key: str, provider) -> str:
+    """The human text for a kind: its key, plus the provider where it has one."""
+    return f"{key} in {provider.display_name}" if key == COMPANY_NOT_FOUND else key
+
+
+def queue_kinds(provider) -> tuple[tuple[str, str], ...]:
+    """(key, label) for each kind, in QUEUE_ORDER."""
+    return tuple((k, queue_label(k, provider)) for k in QUEUE_ORDER)
 
 
 def review_queue(pass_: _Cached, coverage: list[dict], rows: list[dict]) -> list[dict]:
@@ -300,10 +330,10 @@ def review_queue(pass_: _Cached, coverage: list[dict], rows: list[dict]) -> list
     """
     queue: list[dict] = []
 
-    def add(kind, company, who, crm, other, check):
+    def add(kind, company, who, crm, other, check, linkedin=""):
         queue.append(
-            {"kind": kind, "company": company, "who": who, "crm": crm, "other": other,
-             "check": check}
+            {"kind": kind, "company": company, "who": who, "linkedin": linkedin,
+             "crm": crm, "other": other, "check": check}
         )
 
     for c in coverage:
@@ -320,19 +350,32 @@ def review_queue(pass_: _Cached, coverage: list[dict], rows: list[dict]) -> list
         elif c.get("assessed", True) and (
             c.get("other_missing") or "no size" in str(c.get("meets")) or "HQ unknown" in str(c.get("meets"))
         ):
-            add("Headcount or HQ missing", label, "", crm_side,
-                other_side if c.get("verdict_check") != not_found(pass_.provider) else not_found(pass_.provider),
-                "Company LinkedIn page; fill in the CRM")
+            provider_has_nothing = c.get("verdict_check") == not_found(pass_.provider)
+            crm_has_both = bool(
+                c.get("employees") not in ("", None) and c.get("hq")
+                and "no size" not in str(c.get("meets")) and "HQ unknown" not in str(c.get("meets"))
+            )
+            if provider_has_nothing and crm_has_both:
+                # Nothing is missing from the CRM: the provider just does not
+                # know the company, so the CRM's numbers have no second opinion.
+                add(queue_label(COMPANY_NOT_FOUND, pass_.provider), label, "",
+                    crm_side, not_found(pass_.provider),
+                    "Company LinkedIn page: headcount and HQ (the only second opinion "
+                    "this company gets)")
+            else:
+                add("Headcount or HQ missing", label, "", crm_side,
+                    not_found(pass_.provider) if provider_has_nothing else other_side,
+                    "Company LinkedIn page; fill in the CRM")
         if c.get("assessed", True) and c.get("name") and company_mismatch(c.get("domain"), c.get("name")):
             add("Account may be linked to the wrong company", label, "",
                 f"account '{c.get('name')}' reached through {c.get('domain')}", "",
-                "The account's Website field in the CRM")
+                "The account on this company's contacts in the CRM")
 
     for r in rows:
         if r.get("linkedin_other_person"):
             add("CRM LinkedIn may be someone else", r.get("company", ""), r.get("name", ""),
                 r.get("linkedin") or "", f"profile at that URL is {r['linkedin_other_person']}",
-                "Open the CRM's LinkedIn URL")
+                "Open the CRM's LinkedIn URL", linkedin=_crm_url(r))
         if not r.get("still_at") or r.get("still_at") == not_found(pass_.provider):
             continue
         who = r.get("name", "")
@@ -340,14 +383,14 @@ def review_queue(pass_: _Cached, coverage: list[dict], rows: list[dict]) -> list
         if r["still_at"].startswith("no —"):
             add("May have left", company, who, f"at {company}",
                 r["still_at"][len("no — "):] + (f" (updated {r['other_updated']})" if r.get("other_updated") else ""),
-                "Their LinkedIn profile")
+                CHECK_THEIR_LINKEDIN, linkedin=_crm_url(r))
         if r.get("other_title"):
             add("Title differs", company, who, r.get("title") or "(none)", r["other_title"],
-                "Their LinkedIn profile")
+                CHECK_THEIR_LINKEDIN, linkedin=_crm_url(r))
         if r.get("other_linkedin"):
             add("LinkedIn differs", company, who, r.get("linkedin") or "(none)", r["other_linkedin"],
                 "Open both — one may be someone else")
 
-    rank = {k: i for i, k in enumerate(QUEUE_ORDER)}
+    rank = {label: i for i, (_, label) in enumerate(queue_kinds(pass_.provider))}
     queue.sort(key=lambda q: (rank.get(q["kind"], len(rank)), str(q["company"]).lower()))
     return queue
