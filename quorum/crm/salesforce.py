@@ -55,6 +55,12 @@ CONTACT_STANDARD = [
 ]
 
 # Website is a standard field in every org, so it needs no field-map entry.
+# One query per company reads every contact at it, to look for one person held
+# twice. The cap bounds the cost: a company with more contacts than this is
+# checked on its first COMPANY_CONTACTS_LIMIT only, so a duplicate beyond that
+# goes unseen rather than slowing the run.
+COMPANY_CONTACTS_LIMIT = 2000
+
 ACCOUNT_STANDARD = ["Name", "Type", "Website"]
 
 
@@ -216,6 +222,25 @@ class Salesforce:
             str(x) for x in (out["city"], out["state"], out["country"]) if x
         )
         return out
+
+    def contacts_for_company(
+        self, domain: str, account_domain: str = "", account_id: Optional[str] = None
+    ) -> list[Contact]:
+        """Every contact at a company, by email domain, by the account's website
+        domain, or by the account itself — name, email, title and account only.
+        For finding one person held as several records."""
+        if not self.configured or not domain:
+            return []
+        clauses = [f"Email LIKE '%@{soql_quote(domain)}'"]
+        if account_domain and account_domain != domain:
+            clauses.append(f"Email LIKE '%@{soql_quote(account_domain)}'")
+        if account_id:
+            clauses.append(f"AccountId = '{soql_quote(account_id)}'")
+        soql = (
+            f"SELECT Name, Email, Title, AccountId FROM Contact WHERE "
+            f"{' OR '.join(clauses)} LIMIT {COMPANY_CONTACTS_LIMIT}"
+        )
+        return [self._contact(r) for r in (self.query(soql) or {}).get("records") or []]
 
     def senior_bench(self, domain: str, senior_terms: list[str]) -> list[Contact]:
         """Step 5 — contacts at a domain whose Title clears the focus profile's

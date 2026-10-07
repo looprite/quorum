@@ -16,6 +16,7 @@ from ..crm.fieldmap import FieldMap
 from ..crm.hubspot import HubSpot
 from ..crm.salesforce import Salesforce
 from . import coverage as coverage_mod
+from . import duplicates as duplicates_mod
 from . import enrichment as enrichment_mod
 from . import people as people_mod
 from . import retention as retention_mod
@@ -255,7 +256,17 @@ def run_weekly(cfg: Config, log=print) -> dict:
             enrichment_mod.not_in_crm(enriching, reconciled)
             enrichment_mod.in_crm_no_title(enriching, reconciled, coverage)
             enrichment_mod.check_withheld(enriching)
-            queue = enrichment_mod.review_queue(enriching, coverage, stakeholders, reconciled)
+            # Salesforce only, and only here: the one place the result is read is
+            # the review queue, which exists with a provider.
+            duplicates, dup_queries = duplicates_mod.find(sf, coverage)
+            if sf.configured:
+                log(
+                    f"[*] Salesforce: {dup_queries} duplicate-contact queries, "
+                    f"{sum(len(s) for s in duplicates.values())} name(s) held more than once"
+                )
+            queue = enrichment_mod.review_queue(
+                enriching, coverage, stakeholders, reconciled, duplicates
+            )
             moved = sum(1 for r in stakeholders if str(r.get("still_at", "")).startswith("no —"))
             on_email = sum(1 for r in stakeholders if r.get("matched_on") == "email")
             on_linkedin = sum(1 for r in stakeholders if r.get("matched_on") == "LinkedIn")

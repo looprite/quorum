@@ -252,10 +252,26 @@ sub-heading per kind, with its count.
 | May have left | The provider places the person at a different company. The row ends `(<provider> record updated <date>)`: when the provider last refreshed its record, not when the person moved |
 | CRM LinkedIn may be someone else | The CRM's LinkedIn URL leads to a profile under a different name |
 | CRM email may belong to someone else | The provider's record at the CRM contact's email is under a different name |
+| Possible duplicate contact | The CRM holds two or more contacts with the same first and last name at the company (see below) |
 | Account may be linked to the wrong company | The CRM account's name does not resemble the domain it was reached through |
 | Title differs | The provider's title differs from the CRM's |
 | Title missing in CRM | A person met this week is in the CRM with no title, and the provider has one |
 | LinkedIn differs | The provider's LinkedIn URL differs from the CRM's |
+
+**Possible duplicate contact** exists because one person can be several CRM
+contacts: different emails or domains, sometimes different accounts. A meeting
+matches whichever record has the email it saw, often the one with no title.
+Quorum asks rather than guesses which record is the real one. With Salesforce,
+one query per company met reads its contacts (by email domain, the account's
+website domain, or the account itself; name, email, title and account only,
+capped at 2,000 per company, so a larger company is checked on its first 2,000).
+A first-and-last name held by two or more is a duplicate set, and each person
+met this week or on the stakeholder list who is in one gets a single row listing
+the records as `email — title`. Merge them in the CRM if they are the same
+person. The query runs only when a provider is configured, since the queue is the
+only place its answer is shown, and not at all with HubSpot only. Independently
+of the queue, the stakeholder list never shows one person twice at a company: the
+highest-ranked record is kept and the next person takes the freed place.
 
 **Two domains.** Some companies email from one domain and are filed under
 another. With Salesforce, the account's standard `Website` field (reduced to a

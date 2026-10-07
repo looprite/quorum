@@ -328,8 +328,11 @@ companies, which seniority levels, how many per company, in what order.
 
 Ordering is two rules, no weighting: most senior first, recent contact breaking
 ties between equals. Capped at `SHORTLIST_SIZE` (3) per company — the cap is a
-feature. A company with no senior CRM contact gets an explicit
-`— no senior contact in Salesforce —` row rather than being omitted.
+feature. One person takes one place: where the CRM holds them as several
+contacts at a company, the highest-ranked record is kept (same first and last
+name, middle names and punctuation ignored) and the place the other would have
+taken goes to the next person. A company with no senior CRM contact gets an
+explicit `— no senior contact in Salesforce —` row rather than being omitted.
 
 `Recent contact?` is one yes/no question. Contact is a meeting (from DB) or
 anything logged in the CRM (`LastActivityDate`); recent is `RECENT_DAYS` (90).

@@ -178,6 +178,8 @@ def build_coverage(
                 # The account's Website domain, where Salesforce gave one. ""
                 # when unknown, and always "" with HubSpot only.
                 "account_domain": firmo.get("account_domain") or "",
+                # Which account the domain met led to, for the duplicate check.
+                "account_id": stats.get("account_id") or "",
                 "meets": "yes" if ok else (why or "no"),
                 # The customer gate applies to the ICP-fit count, not only to the
                 # shortlist — otherwise the triage number overcounts fit.

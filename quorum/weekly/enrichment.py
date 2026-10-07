@@ -23,12 +23,13 @@ therefore holds disagreements and missing values; it does not certify the rest.
 from __future__ import annotations
 
 import re
-import unicodedata
 from typing import Optional
 
 from ..crm.fieldmap import NOT_AVAILABLE, NOT_CHECKED
 from ..enrich import Withheld, linkedin_handle
 from .coverage import meets_profile
+from . import duplicates as duplicates_mod
+from .names import name_key, name_tokens as _name_tokens
 from .people import company_mismatch, in_any_crm, missing_from_crm
 from .stakeholders import ICP_NOT_ASSESSED, NO_SENIOR_CONTACT
 
@@ -143,13 +144,6 @@ def _handle(url: str) -> str:
     """For comparing two LinkedIn values: the handle when there is one, the
     normalised text otherwise."""
     return linkedin_handle(url) or _norm(url)
-
-
-def _name_tokens(name: str) -> list[str]:
-    plain = unicodedata.normalize("NFKD", name or "").encode("ascii", "ignore").decode()
-    # An apostrophe joins ("O'Neil" is "oneil"); any other punctuation separates.
-    plain = re.sub(r"['’]", "", plain.lower())
-    return re.sub(r"[^a-z\s]", " ", plain).split()
 
 
 def names_agree(a: str, b: str) -> bool:
@@ -394,6 +388,7 @@ QUEUE_ORDER = (
     "May have left",
     "CRM LinkedIn may be someone else",
     "CRM email may belong to someone else",
+    "Possible duplicate contact",
     "Account may be linked to the wrong company",
     "Title differs",
     "Title missing in CRM",
@@ -412,7 +407,8 @@ def queue_kinds(provider) -> tuple[tuple[str, str], ...]:
 
 
 def review_queue(
-    pass_: _Cached, coverage: list[dict], rows: list[dict], met: list[dict] = ()
+    pass_: _Cached, coverage: list[dict], rows: list[dict], met: list[dict] = (),
+    duplicates: dict = None,
 ) -> list[dict]:
     """Every item a person should settle, and nothing else.
 
@@ -504,6 +500,26 @@ def review_queue(
             add("Title missing in CRM", company, who, "(none)", m["other_title"],
                 "Open their LinkedIn; fill Title in the CRM",
                 linkedin=crm_url or m.get("other_linkedin") or "")
+
+    # One row per person held as several CRM contacts at a company, whether they
+    # were met this week or are on the stakeholder list (`weekly/duplicates.py`).
+    people = [
+        (r.get("domain"), r.get("company") or r.get("domain") or "", r.get("name"),
+         _crm_url(r)) for r in rows
+    ] + [
+        (m.get("domain"), where.get(m.get("domain")) or m.get("domain") or "",
+         m.get("crm_name") if in_any_crm(m) else "", m.get("linkedin_url_in_crm") or "")
+        for m in met
+    ]
+    listed: set = set()
+    for domain, company, who, url in people:
+        key = name_key(who)
+        records_ = (duplicates or {}).get(domain, {}).get(key) if key else None
+        if not records_ or (domain, key) in listed:
+            continue
+        listed.add((domain, key))
+        add("Possible duplicate contact", company, who, duplicates_mod.records(records_), "",
+            "Merge in the CRM if the same person", linkedin=url)
 
     rank = {label: i for i, (_, label) in enumerate(queue_kinds(pass_.provider))}
     queue.sort(key=lambda q: (rank.get(q["kind"], len(rank)), str(q["company"]).lower()))

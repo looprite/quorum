@@ -1268,3 +1268,147 @@ def test_tab_1_linkedin_column_in_every_configured_state(tmp_path, sf_on, hs_on)
         return
     assert by["Sam Ito"]["LinkedIn (CRM)"] == (url if sf_on else NOT_CHECKED)
     assert by["Dana Reyes"]["LinkedIn (CRM)"] == NO_RECORD
+
+
+# --- one person, several CRM contacts ---------------------------------------- #
+
+from quorum.weekly import duplicates as duplicates_mod  # noqa: E402
+
+
+class _SFDups(_SF):
+    """Salesforce with a chosen bench and a chosen set of contacts per company."""
+
+    def __init__(self, bench, company_contacts, configured=True):
+        self._bench, self._company = bench, company_contacts
+        self.configured = configured
+        self.company_calls = []
+
+    def senior_bench(self, domain, terms):
+        return list(self._bench.get(domain, []))
+
+    def contacts_for_company(self, domain, account_domain="", account_id=None):
+        self.company_calls.append((domain, account_domain, account_id))
+        return list(self._company.get(domain, []))
+
+
+def _acme(name, email, title):
+    return Contact(name=name, title=title, email=email,
+                   linkedin="https://www.linkedin.com/in/" + email.split("@")[0])
+
+
+DANA = _acme("Dana Reyes", "dana@acme.example", "VP Sales")
+DANA_TWICE = _acme("Dana M. Reyes", "dana.reyes@acme.test", "")
+LEE = _acme("Lee Park", "lee@acme.example", "VP Marketing")
+KIM = _acme("Kim Wu", "kim@acme.example", "Director Ops")
+
+
+def _dup_run(sf, provider=None, met=()):
+    cfg, hs = _cfg(), _HS()
+    cfg.salesforce.configured = sf.configured
+    people = _attendees()
+    coverage = coverage_mod.build_coverage(
+        cfg, people_mod.group_companies(people), PROFILE, sf, hs
+    )
+    rows, _ = stakeholders_mod.build(
+        cfg, coverage, coverage_mod.seniority_terms(PROFILE), {}, sf
+    )
+    found, queries = duplicates_mod.find(sf, coverage)
+    pass_ = enrichment.start(provider or _Provider())
+    queue = enrichment.review_queue(pass_, coverage, rows, list(met), found)
+    return rows, queue, found, queries
+
+
+def _acme_names(rows):
+    return [r["name"] for r in rows if r["domain"] == "acme.example"]
+
+
+def test_one_person_held_twice_takes_one_slot_and_is_one_queue_row():
+    sf = _SFDups(
+        {"acme.example": [DANA, _acme("Dana Reyes", "dana2@acme.example", "VP"), LEE, KIM]},
+        {"acme.example": [DANA, DANA_TWICE, LEE, KIM]},
+    )
+    rows, queue, _, _ = _dup_run(sf)
+
+    # Dana once, and the slot the second record would have taken goes to Kim.
+    assert _acme_names(rows).count("Dana Reyes") == 1
+    assert sorted(_acme_names(rows)) == ["Dana Reyes", "Kim Wu", "Lee Park"]
+    dups = [q for q in queue if q["kind"] == "Possible duplicate contact"]
+    assert len(dups) == 1
+    assert dups[0]["who"] == "Dana Reyes" and dups[0]["company"] == "Acme"
+    # A middle initial still matches; every record is listed, blank titles said so.
+    assert dups[0]["crm"] == ("dana.reyes@acme.test — (no title); "
+                              "dana@acme.example — VP Sales")
+    assert dups[0]["check"] == "Merge in the CRM if the same person"
+    assert dups[0]["linkedin"] == "https://www.linkedin.com/in/dana"
+
+
+def test_a_person_met_and_listed_is_one_row_not_two():
+    sf = _SFDups({"acme.example": [DANA, LEE]}, {"acme.example": [DANA, DANA_TWICE]})
+    met = [{"domain": "acme.example", "crm_name": "Dana Reyes", "in_salesforce": True,
+            "in_hubspot": None, "linkedin_url_in_crm": ""}]
+    _, queue, _, _ = _dup_run(sf, met=met)
+    assert [q["who"] for q in queue if q["kind"] == "Possible duplicate contact"] == ["Dana Reyes"]
+
+
+def test_the_same_name_at_different_companies_is_not_a_duplicate():
+    other = _acme("Dana Reyes", "dana@globex.example", "CRO")
+    sf = _SFDups({"acme.example": [DANA], "globex.example": [other]},
+                 {"acme.example": [DANA], "globex.example": [other]})
+    rows, queue, found, queries = _dup_run(sf)
+
+    assert found == {} and queries == 3          # one query per company met
+    assert not any(q["kind"] == "Possible duplicate contact" for q in queue)
+    assert {"Dana Reyes"} <= set(_acme_names(rows))
+
+
+def test_with_no_duplicates_nothing_is_added_and_the_list_is_unchanged():
+    bench = {"acme.example": [DANA, LEE, KIM]}
+    sf = _SFDups(bench, {"acme.example": [DANA, LEE, KIM]})
+    rows, queue, found, _ = _dup_run(sf)
+
+    assert found == {}
+    assert sorted(_acme_names(rows)) == ["Dana Reyes", "Kim Wu", "Lee Park"]
+    assert not any(q["kind"] == "Possible duplicate contact" for q in queue)
+
+
+def test_without_salesforce_no_duplicate_query_is_made():
+    sf = _SFDups({}, {"acme.example": [DANA, DANA_TWICE]}, configured=False)
+    found, queries = duplicates_mod.find(sf, [{"domain": "acme.example"}])
+
+    assert (found, queries) == ({}, 0) and sf.company_calls == []
+
+
+def test_the_company_query_asks_by_domain_account_domain_and_account():
+    from quorum.crm.fieldmap import FieldMap
+    from quorum.crm.salesforce import Salesforce
+    from tests.conftest import crm_config
+
+    sf = Salesforce(crm_config(), FieldMap({}))
+    sent = []
+    sf.query = lambda soql: sent.append(soql) or {"records": [
+        {"Name": "Dana Reyes", "Email": "dana@acme.example", "Title": "VP", "AccountId": "001x"}]}
+
+    got = sf.contacts_for_company("acme.test", "acme.example", "001x")
+    assert [c.email for c in got] == ["dana@acme.example"]
+    q = sent[0]
+    assert q.startswith("SELECT Name, Email, Title, AccountId FROM Contact WHERE ")
+    assert "Email LIKE '%@acme.test'" in q and "Email LIKE '%@acme.example'" in q
+    assert "AccountId = '001x'" in q and q.endswith("LIMIT 2000")
+    # Not configured: no query at all.
+    off = Salesforce(crm_config(False), FieldMap({}))
+    off.query = lambda soql: sent.append("never")
+    assert off.contacts_for_company("acme.test") == [] and "never" not in sent
+
+
+def test_the_duplicate_kind_has_a_stable_summary_key():
+    from quorum.weekly import summary as summary_mod
+
+    assert "Possible duplicate contact" in enrichment.QUEUE_ORDER
+    assert enrichment.QUEUE_ORDER.index("Possible duplicate contact") == (
+        enrichment.QUEUE_ORDER.index("CRM email may belong to someone else") + 1
+    )
+    kinds = enrichment.queue_kinds(_Provider())
+    stats = summary_mod.build(
+        _cfg(), [], [], [], [], PROFILE, enrichment="Example", queue=[], queue_kinds=kinds,
+    )
+    assert "queue:Possible duplicate contact" in {s["key"] for s in stats}

@@ -22,6 +22,7 @@ from typing import Optional
 from ..config import Config
 from ..crm.fieldmap import NOT_AVAILABLE
 from ..crm.salesforce import Salesforce
+from .names import name_key
 
 # Order matters: the VP test runs before the C-level test so "Vice President"
 # never matches on the word 'president'.
@@ -232,6 +233,17 @@ def build(
         raw[-1]["any_recent_contact"] = any(x["_recent"] for x in scored)
 
         scored.sort(key=lambda x: (-x["_seniority"], not x["_recent"]))
-        rows.extend(scored[: cfg.shortlist_size])
+        # One person is one place on the list. The CRM can hold them as several
+        # contacts, and each would otherwise take a slot; keep the highest
+        # ranked and let the next person up fill the one freed.
+        seen: set = set()
+        unique = []
+        for x in scored:
+            key = name_key(x["name"])
+            if key and key in seen:
+                continue
+            seen.add(key)
+            unique.append(x)
+        rows.extend(unique[: cfg.shortlist_size])
 
     return rows, raw
